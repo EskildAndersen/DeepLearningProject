@@ -1,4 +1,5 @@
 import os
+import numpy as np
 
 filename = "Flickr8k.token.txt"
 file = os.path.join('data', 'texts', filename)
@@ -8,6 +9,13 @@ with open(file) as f:
 
 
 sentences = [line.split('\t')[1].strip().lower() for line in lines]
+sentences_len = [len(s.split(' ')[:-1]) for s in sentences]
+sentences_len_sorted = sorted(sentences_len, reverse=True)
+
+i = np.argmax(sentences_len)
+print(i)
+
+pass
 
 words = {}
 
