@@ -43,7 +43,7 @@ class ImageDataset(torch.utils.data.Dataset):
         self.img_labels = self.img_labels.rename(columns={'index': 'img_path'})
 
         # Resize all pictures into the same dimensions. (probably a bit sus)
-        self.transform = torchvision.transforms.Resize([500, 500])
+        self.transform = torchvision.transforms.Resize([224, 224])
         self.target_transform = target_transform
 
     def __len__(self):
