@@ -4,6 +4,7 @@
 
 sentence = "hej med dig"
 vocab = {"<SOS>":0, "<EOS>": 1, "hej": 2, "med": 3, "dig": 4, "<PAD>": 5}
+invVocab = {v: k for k, v in vocab.items()}
 
 def tokenizeCaptions(sentence,vocab,maxLength):
 
@@ -16,10 +17,9 @@ def tokenizeCaptions(sentence,vocab,maxLength):
     return outputSentence
 
 
-def deTokenizeCaptions(tokenizedSentence,vocab, asString = False):
 
+def deTokenizeCaptions(tokenizedSentence,invVocab, asString = False):
 
-    invVocab = {v: k for k, v in vocab.items()}
     outputSentence = [invVocab.get(word) for word in tokenizedSentence]
 
     if asString:
@@ -32,9 +32,9 @@ def deTokenizeCaptions(tokenizedSentence,vocab, asString = False):
 
 token = tokenizeCaptions(sentence,vocab,10)
 
-deTokenList = deTokenizeCaptions(token,vocab)
+deTokenList = deTokenizeCaptions(token,invVocab)
 
-deTokenWord = deTokenizeCaptions(token,vocab,True)
+deTokenWord = deTokenizeCaptions(token,invVocab,True)
 
 print(token)
 print(deTokenList)
