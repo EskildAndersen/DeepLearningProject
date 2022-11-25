@@ -1,10 +1,9 @@
 # script der skal start token,end token og pad sætningen til en maks længde
 # input er En sætning, et vocab og en maks længde1
 
+from vocabulary import inv_vocab,vocab,max_len,example
 
-sentence = "hej med dig"
-vocab = {"<SOS>":0, "<EOS>": 1, "hej": 2, "med": 3, "dig": 4, "<PAD>": 5}
-invVocab = {v: k for k, v in vocab.items()}
+
 
 def tokenizeCaptions(sentence,vocab,maxLength):
 
@@ -30,11 +29,11 @@ def deTokenizeCaptions(tokenizedSentence,invVocab, asString = False):
     return outputSentence
 
 
-token = tokenizeCaptions(sentence,vocab,10)
+token = tokenizeCaptions(example,vocab,max_len)
 
-deTokenList = deTokenizeCaptions(token,invVocab)
+deTokenList = deTokenizeCaptions(token,inv_vocab)
 
-deTokenWord = deTokenizeCaptions(token,invVocab,True)
+deTokenWord = deTokenizeCaptions(token,inv_vocab,True)
 
 print(token)
 print(deTokenList)
