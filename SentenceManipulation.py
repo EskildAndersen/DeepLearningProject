@@ -28,7 +28,7 @@ with open(new_file, 'w') as f:
         
         # Remove all special characters
         isWithSpecial = bool(re.search('[@_!#$%^&*()<>?/\|}{~:,]', sentence))
-        sentence = re.sub('[@_!#$%^&*()<>?/\|}{~:.,]', ' ', sentence)
+        sentence = re.sub('''[@_!#$%^&*()<>?/\|}{~:.,'"]''', ' ', sentence)
         
         # Remove all double spacing
         sentence = re.sub(' +', ' ', sentence)
