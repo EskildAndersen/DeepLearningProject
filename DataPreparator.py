@@ -63,12 +63,12 @@ class ImageDataset(torch.utils.data.Dataset):
             image = self.transform(image)
         if self.target_transform:
             label = self.target_transform(label)
-        return image, label, self.img_labels.iloc[idx, 0]
+        return image, label
 
 
 if __name__ == "__main__":
     # Define the paths for labels and imagss
-    txtFilePath = 'data/texts/Flickr8k.token.txt'
+    txtFilePath = 'data/texts/labels.txt'
     imgPath = 'data/images/'
 
     # Initialzie dataset class and into the loader.

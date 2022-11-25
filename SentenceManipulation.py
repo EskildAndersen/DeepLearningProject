@@ -15,6 +15,9 @@ with open(new_file, 'w') as f:
         
         org = sentence
         
+        # All lower case letters
+        sentence = sentence.lower()
+        
         # Remove all 's
         isWithS = bool(re.search("'s'", sentence))
         sentence = re.sub("'s", '', sentence)
@@ -31,8 +34,6 @@ with open(new_file, 'w') as f:
         sentence = re.sub(' +', ' ', sentence)
             
         output = '\t'.join([img, sentence])
-        
-        
         
         f.write(output)
         
