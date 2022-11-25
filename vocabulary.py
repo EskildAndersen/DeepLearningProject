@@ -15,7 +15,7 @@ example = _sentences[0]
 print(max_len)
 
 _words = {w for s in _sentences for w in s.split(' ')}
-_words |= {'<EOS>', '<SOS>', '<PAS>'}
+_words |= {'<EOS>', '<SOS>', '<PAD>'}
 
 vocab = {w : i for i, w in enumerate(_words)}
 inv_vocab = {i : w for w, i in vocab.items()}
