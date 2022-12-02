@@ -12,6 +12,7 @@ import random
 SOS_token = vocab.get('<SOS>')
 EOS_token = vocab.get('<EOS>')
 PAD_token = vocab.get('<PAD>')
+vocab_size = len(vocab)
 
 Dataset = ImageDataset('labels.txt', maxLength=max_len)
 
@@ -27,7 +28,7 @@ lenFeature = Dataset.__getFeatureLen__()
 
 hidden_size = 256
 encoder = Encoder(input_size=max_len, hidden_size=hidden_size,
-                  feature_len=lenFeature, vocab_len=len(vocab), 
+                  feature_len=lenFeature, vocab_len=len(vocab),
                   padding_index=PAD_token)
 decoder = Decoder(input_size=hidden_size,
                   hidden_size=hidden_size, vocab_size=len(vocab))
@@ -40,12 +41,14 @@ for x, y, z in trainloader:
     label, input_sentence, input_feature = x, y, z
     break
 
+target_sentence = torch.Tensor(
+    F.one_hot(input_sentence.squeeze(0), len(vocab)))
+
 
 def train(input_feature, input_sentence, target_sentence,
           encoder, decoder, encoder_optimizer, decoder_optimizer,
           criterion, max_length=max_len):
-    input_length = 39
-    target_length = 39
+
     encoder_optimizer.zero_grad()
     decoder_optimizer.zero_grad()
 
@@ -54,10 +57,10 @@ def train(input_feature, input_sentence, target_sentence,
         max_length, encoder.hidden_size, device=device)
     loss = 0
 
+    # Encoder loop
     for i in range(1, max_length):
         padding = torch.LongTensor([PAD_token for _ in range(max_length-i)])
         text_in = torch.cat((input_sentence[0][:i], padding))
-        # print(len(text_in))
 
         output, encoder_hidden = encoder(
             text_in, input_feature, encoder_hidden)
@@ -65,13 +68,49 @@ def train(input_feature, input_sentence, target_sentence,
         pass
 
     output = decoder(encoder_outputs)
-    # output_sentence = output.argmax(axis=1)
     # sentence = deTokenizeCaptions(np.array(output_sentence), inv_vocab)
-    
-    
-    
+
+    for o, t in zip(output, target_sentence):
+        pass
+        loss += criterion(o, t)
+        
+    loss.backward()
+    encoder_optimizer.step()
+    decoder_optimizer.step()
+
+    return loss.item()
+
+
+def trainIters(encoder, decoder, n_iters, print_every, plot_every, lr):
+    plot_losses = []
+    print_loss_total = 0
+    plot_loss_total = 0
+
+    encoder_optimizer = optim.Adam(encoder.parameters(), lr=lr)
+    decoder_optimizer = optim.Adam(encoder.parameters(), lr=lr)
+    criterion = nn.NLLLoss()
+
+    for iter in range(n_iters):
+        for i, (label, sentence, feature) in enumerate(trainloader):
+            target = torch.Tensor(
+                F.one_hot(sentence.squeeze(0), vocab_size))
+            loss = train(feature, sentence, target, encoder, decoder,
+                         encoder_optimizer, decoder_optimizer, criterion)
+
+            print_loss_total += loss
+            plot_loss_total += loss
+
+            if i % print_every == 0:
+                print_loss_avg = print_loss_total / print_every
+                print_loss_total = 0
+                print(f'{print_loss_avg} : {i}')
+
+            if i % plot_every == 0:
+                plot_loss_avg = plot_loss_total / plot_every
+                plot_losses.append(plot_loss_avg)
+                plot_loss_total = 0
 
 
 if __name__ == '__main__':
-    train(input_feature, input_sentence, label, encoder,
-          decoder, encoder_optimizer, encoder_optimizer, None)
+    trainIters(encoder, decoder, n_iters=3,
+               print_every=1, plot_every=100, lr=0.004)

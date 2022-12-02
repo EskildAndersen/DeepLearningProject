@@ -68,7 +68,7 @@ class Decoder(nn.Module):
         self.linear1 = nn.Linear(self.input_size, self.hidden_size)
         self.linear2 = nn.Linear(self.hidden_size, self.vocab_size)
         self.relu = nn.ReLU()
-        self.softmax = nn.Softmax(dim=0)
+        self.softmax = nn.LogSoftmax(dim=1)
         
 
     def forward(self, encoder_outputs):
@@ -77,6 +77,7 @@ class Decoder(nn.Module):
         x = self.relu(x)
         x = self.linear2(x)
         output = self.softmax(x)
+        # output = torch.argmax(output, 1)
         
         return output
 

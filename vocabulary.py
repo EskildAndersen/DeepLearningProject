@@ -12,7 +12,6 @@ _sentences = [line.split('\t')[1].strip().lower() for line in _lines]
 
 max_len = max([len(s.split(' ')) for s in _sentences]) + 2
 example = _sentences[0]
-print(max_len)
 
 _words = {w for s in _sentences for w in s.split(' ')}
 _words |= {'<EOS>', '<SOS>', '<PAD>'}
