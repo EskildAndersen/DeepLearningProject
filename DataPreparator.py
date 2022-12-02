@@ -63,7 +63,7 @@ class ImageDataset(torch.utils.data.Dataset):
         return len(self.img_labels)
 
     def __getFeatureLen__(self):
-        return len(self.features)
+        return len(list(self.features.values())[0])
 
     def __getitem__(self, idx):
 
@@ -91,7 +91,7 @@ class ImageDataset(torch.utils.data.Dataset):
         if self.isForVisualization:
             return image, label
         else:
-            return label, labelEncoded, torch.LongTensor(featureVector)
+            return label, torch.LongTensor(labelEncoded), torch.Tensor(featureVector)
 
 
 if __name__ == "__main__":
@@ -100,7 +100,7 @@ if __name__ == "__main__":
     imgPath = 'data/images/'
 
     # Initialzie dataset class and into the loader.
-    Dataset = ImageDataset(annotationsFile, imgPath, maxLength=max_len)
+    Dataset = ImageDataset(annotationsFile, maxLength=max_len)
     #data_loader = DataLoader(Dataset, batch_size=1, shuffle=True)
 
     for x, y, z in Dataset:
