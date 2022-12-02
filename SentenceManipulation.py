@@ -14,10 +14,10 @@ with open(new_file, 'w') as f:
         img, sentence = line.split('\t')
 
         org = sentence
-
-        # Lower sentences
+        
+        # All lower case letters
         sentence = sentence.lower()
-
+        
         # Remove all 's
         isWithS = bool(re.search("'s'", sentence))
         sentence = re.sub("'s", '', sentence)
@@ -28,11 +28,11 @@ with open(new_file, 'w') as f:
 
         # Remove all special characters
         isWithSpecial = bool(re.search('[@_!#$%^&*()<>?/\|}{~:,]', sentence))
-        sentence = re.sub('[@_!#$%^&*()<>?/\|}{~:.,]', ' ', sentence)
-
+        sentence = re.sub('''[@_!#$%^&*()<>?/\|}{~:.,'"]''', ' ', sentence)
+        
         # Remove all double spacing
         sentence = re.sub(' +', ' ', sentence)
 
         output = '\t'.join([img, sentence])
-
+        
         f.write(output)
