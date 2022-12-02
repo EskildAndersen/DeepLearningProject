@@ -25,7 +25,7 @@ from CaptionCoder import tokenizeCaptions
 
 
 class ImageDataset(torch.utils.data.Dataset):
-    def __init__(self, annotations_file, img_dir, maxLength, transform=None, target_transform=None, isForVisualization=False):
+    def __init__(self, annotations_file, maxLength, transform=None, target_transform=None, isForVisualization=False):
 
         self.img_dir = os.path.join('data', 'images/')
         self.annotations_file = os.path.join('data', 'texts', annotations_file)
@@ -62,6 +62,9 @@ class ImageDataset(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.img_labels)
 
+    def __getFeatureLen__(self):
+        return len(self.features)
+
     def __getitem__(self, idx):
 
         # We define the image path and the corresponding pandas column with the filename:
@@ -97,7 +100,7 @@ if __name__ == "__main__":
     imgPath = 'data/images/'
 
     # Initialzie dataset class and into the loader.
-    Dataset = ImageDataset(annotationsFile, imgPath, maxLength=40)
+    Dataset = ImageDataset(annotationsFile, imgPath, maxLength=max_len)
     #data_loader = DataLoader(Dataset, batch_size=1, shuffle=True)
 
     for x, y, z in Dataset:
