@@ -16,9 +16,9 @@ def tokenizeCaptions(sentence):
 
 
 def deTokenizeCaptions(tokenizedSentence, asString=False):
-    global invVocab
+    global inv_vocab
 
-    outputSentence = [invVocab.get(word) for word in tokenizedSentence]
+    outputSentence = [inv_vocab.get(word) for word in tokenizedSentence]
 
     if asString:
         removeTokens = ["<SOS>", "<EOS>", "<PAD>"]
@@ -33,11 +33,9 @@ def deTokenizeCaptions(tokenizedSentence, asString=False):
 
 if __name__ == '__main__':
     from vocabulary import example
-    token = tokenizeCaptions(example, vocab, max_len)
-
-    deTokenList = deTokenizeCaptions(token, inv_vocab)
-
-    deTokenWord = deTokenizeCaptions(token, inv_vocab, True)
+    token = tokenizeCaptions(example)
+    deTokenList = deTokenizeCaptions(token)
+    deTokenWord = deTokenizeCaptions(token, True)
 
     print(token)
     print(deTokenList)

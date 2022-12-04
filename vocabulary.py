@@ -26,7 +26,7 @@ EOS_token = vocab.get('<EOS>')
 SOS_token = vocab.get('<SOS>')
 PAD_token = vocab.get('<PAD>')
 
-vocab_len = len(vocab)
+vocab_size = len(vocab)
 
 _s1 = time.time()
 

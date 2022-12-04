@@ -6,43 +6,41 @@ import numpy as np
 from CaptionCoder import deTokenizeCaptions
 from EncoderDecoder import Encoder, Decoder
 from DataPreparator import ImageDataset
-from vocabulary import max_len, vocab, inv_vocab
-import random
+from vocabulary import max_len, vocab, inv_vocab, vocab_size,\
+    SOS_token, EOS_token, PAD_token
 
-SOS_token = vocab.get('<SOS>')
-EOS_token = vocab.get('<EOS>')
-PAD_token = vocab.get('<PAD>')
-vocab_size = len(vocab)
+# Parameters
+hidden_size = 256
+learning_rate = 0.05
 
-Dataset = ImageDataset('labels.txt', maxLength=max_len)
-
-trainloader = torch.utils.data.DataLoader(Dataset,
-                                          batch_size=1,
-                                          shuffle=True)
-
+# Setting up device
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 device = torch.device("cpu")
 
-lenFeature = Dataset.__getFeatureLen__()
+# Training dataset
+train_dataset = ImageDataset('train_labels.txt')
+
+trainloader = torch.utils.data.DataLoader(train_dataset,
+                                          batch_size=1,
+                                          shuffle=True)
+
+lenFeature = train_dataset.__getFeatureLen__()
 
 
-hidden_size = 256
+# Encoder and decoder setup
 encoder = Encoder(input_size=max_len, hidden_size=hidden_size,
-                  feature_len=lenFeature, vocab_len=len(vocab),
+                  feature_len=lenFeature, vocab_len=vocab_size,
                   padding_index=PAD_token)
 decoder = Decoder(input_size=hidden_size,
-                  hidden_size=hidden_size, vocab_size=len(vocab))
+                  hidden_size=hidden_size, vocab_size=vocab_size)
 
-learning_rate = 0.05
-encoder_optimizer = optim.Adam(encoder.parameters(), lr=learning_rate)
-#decoder_optimizer = optim.Adam(decoder.parameters(), lr=learning_rate)
 
 for x, y, z in trainloader:
     label, input_sentence, input_feature = x, y, z
     break
 
 target_sentence = torch.Tensor(
-    F.one_hot(input_sentence.squeeze(0), len(vocab)))
+    F.one_hot(input_sentence.squeeze(0), vocab_size))
 
 
 def train(input_feature, input_sentence, target_sentence,
@@ -81,13 +79,13 @@ def train(input_feature, input_sentence, target_sentence,
     return loss.item()
 
 
-def trainIters(encoder, decoder, n_iters, print_every, plot_every, lr):
+def trainIters(encoder, decoder, optimizer, n_iters, print_every, plot_every, lr):
     plot_losses = []
     print_loss_total = 0
     plot_loss_total = 0
 
-    encoder_optimizer = optim.Adam(encoder.parameters(), lr=lr)
-    decoder_optimizer = optim.Adam(encoder.parameters(), lr=lr)
+    encoder_optimizer = optimizer(encoder.parameters(), lr=lr)
+    decoder_optimizer = optimizer(encoder.parameters(), lr=lr)
     criterion = nn.NLLLoss()
 
     for iter in range(n_iters):
@@ -112,5 +110,5 @@ def trainIters(encoder, decoder, n_iters, print_every, plot_every, lr):
 
 
 if __name__ == '__main__':
-    trainIters(encoder, decoder, n_iters=3,
+    trainIters(encoder, decoder, optimizer=optim.Adam, n_iters=3,
                print_every=1, plot_every=100, lr=0.004)
