@@ -1,22 +1,22 @@
 # script der skal start token,end token og pad sætningen til en maks længde
 # input er En sætning, et vocab og en maks længde1
 
-from vocabulary import inv_vocab, vocab, max_len, example
+from vocabulary import inv_vocab, vocab, max_len, \
+    SOS_token, EOS_token, PAD_token
 
 
-def tokenizeCaptions(sentence, vocab, maxLength):
-
-    SOS = vocab.get("<SOS>")
-    EOS = vocab.get("<EOS>")
-    PAD = vocab.get("<PAD>")
+def tokenizeCaptions(sentence):
+    global SOS_token, EOS_token, PAD_token, vocab, max_len
 
     outputSentence = [vocab.get(word) for word in sentence.split()]
-    outputSentence = [SOS] + outputSentence + [EOS] + \
-        [PAD]*(maxLength - len(outputSentence)-2)
+    outputSentence = [SOS_token] + outputSentence + [EOS_token] + \
+        [PAD_token]*(max_len - len(outputSentence)-2)
+
     return outputSentence
 
 
-def deTokenizeCaptions(tokenizedSentence, invVocab, asString=False):
+def deTokenizeCaptions(tokenizedSentence, asString=False):
+    global invVocab
 
     outputSentence = [invVocab.get(word) for word in tokenizedSentence]
 
@@ -24,17 +24,21 @@ def deTokenizeCaptions(tokenizedSentence, invVocab, asString=False):
         removeTokens = ["<SOS>", "<EOS>", "<PAD>"]
         strOut = " "
         outputSentence = [
-            word for word in outputSentence if word not in removeTokens]
+            word for word in outputSentence if word not in removeTokens
+        ]
         outputSentence = strOut.join(outputSentence)
+
     return outputSentence
 
 
-# token = tokenizeCaptions(example,vocab,max_len)
+if __name__ == '__main__':
+    from vocabulary import example
+    token = tokenizeCaptions(example, vocab, max_len)
 
-# deTokenList = deTokenizeCaptions(token,inv_vocab)
+    deTokenList = deTokenizeCaptions(token, inv_vocab)
 
-# deTokenWord = deTokenizeCaptions(token,inv_vocab,True)
+    deTokenWord = deTokenizeCaptions(token, inv_vocab, True)
 
-# print(token)
-# print(deTokenList)
-# print(deTokenWord)
+    print(token)
+    print(deTokenList)
+    print(deTokenWord)
