@@ -2,14 +2,15 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-
 # Så vi skal basically finde ud hidden size som skal encodes. Dernæst hvad gør nn.Encoding præcist?
 # nn.GRU = multi-layer gated recurrent unit
 
 
 class Encoder(nn.Module):
-    def __init__(self, input_size, hidden_size, feature_len, vocab_len, padding_index, dropout_p=0.1):
+    def __init__(self, input_size, hidden_size, feature_len, vocab_len, padding_index, device, dropout_p=0.1):
         super(Encoder, self).__init__()
+
+        self.device = device
 
         # til venstre
         self.hidden_size = hidden_size
@@ -18,9 +19,9 @@ class Encoder(nn.Module):
         self.dropout = nn.Dropout(dropout_p)
 
         # til højre
-        self.Linear1 = nn.Linear(in_features=feature_len, out_features=8192)
-        self.Linear2 = nn.Linear(in_features=8192, out_features=4096)
-        self.Linear3 = nn.Linear(in_features=4096, out_features=hidden_size)
+        self.Linear1 = nn.Linear(in_features=feature_len, out_features=7000)
+        self.Linear2 = nn.Linear(in_features=7000, out_features=3000)
+        self.Linear3 = nn.Linear(in_features=3000, out_features=hidden_size)
         self.relu = nn.ReLU()
 
     def forward(self, input, input2, hidden):
@@ -46,20 +47,23 @@ class Encoder(nn.Module):
         featureThing = featureThing.unsqueeze(0)
 
         # combine shit
-
+        pass
         output = torch.add(rnn, featureThing, alpha=1)
 
         return output.squeeze(0).squeeze(0), hidden
 
     def initHidden(self):
-        return torch.zeros(1, 1, self.hidden_size)
+        return torch.zeros(1, 1, self.hidden_size, device=self.device)
 
 # Her skal vi nok være opmærksom på embedding-leddet igen samt attention layeret.
 # Der sker softmax i forward samt torch.bmm -> Performs a batch matrix-matrix product of matrices stored in input and mat2.
 
 class Decoder(nn.Module):
-    def __init__(self, input_size, hidden_size, vocab_size, dropout_p=0.1):
+    def __init__(self, input_size, hidden_size, vocab_size, device, dropout_p=0.1):
         super(Decoder, self).__init__()
+
+        self.device = device
+
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.vocab_size = vocab_size
@@ -68,7 +72,7 @@ class Decoder(nn.Module):
         self.linear1 = nn.Linear(self.input_size, self.hidden_size)
         self.linear2 = nn.Linear(self.hidden_size, self.vocab_size)
         self.relu = nn.ReLU()
-        self.softmax = nn.LogSoftmax(dim=1)
+        self.logsoftmax = nn.LogSoftmax(dim=1)
         
 
     def forward(self, encoder_outputs):
@@ -76,10 +80,10 @@ class Decoder(nn.Module):
         x = self.linear1(encoder_outputs)
         x = self.relu(x)
         x = self.linear2(x)
-        output = self.softmax(x)
-        # output = torch.argmax(output, 1)
-        
+        output = self.logsoftmax(x)
+        #output = torch.argmax(x, 1)
+    
         return output
 
     def initHidden(self):
-        return torch.zeros(1, 1, self.hidden_size)
+        return torch.zeros(1, 1, self.hidden_size, device=self.device)
