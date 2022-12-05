@@ -5,6 +5,8 @@ Script to generate data class
 This script assusmes that path is structured as mentioend in readme.
 
 '''
+from torch.utils.data import Dataset
+import re
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -24,39 +26,38 @@ from vocabulary import inv_vocab, vocab, max_len
 from CaptionCoder import tokenizeCaptions
 
 
-class ImageDataset(torch.utils.data.Dataset):
-    def __init__(self, annotations_file, maxLength, transform=None, target_transform=None, isForVisualization=False):
+'''
+Script to generate data class
 
-        self.img_dir = os.path.join('data', 'images/')
+This script assusmes that path is structured as mentioend in readme.
+'''
+
+
+class ImageDataset(Dataset):
+    def __init__(self, annotations_file):
+        # Set paths
+        self.img_dir = os.path.join('data', 'images')
         self.annotations_file = os.path.join('data', 'texts', annotations_file)
         self.feature_dir = os.path.join('data', 'features', 'features.p')
 
-        self.img_labels = pd.read_csv(
-            self.annotations_file, sep='#\d+\t', header=None, names=['path', 'text'], engine='python').reset_index(drop=True)
+        # Load labels
+        self.dct = dict()
+        with open(self.annotations_file) as f:
+            for line in f.readlines():
+                line = line.strip()
+                img, label = re.split('#\d\t', line)
+                self.dct[img] = self.dct.get(img, []) + [label]
 
-        self.Dict = dict()
-
-        # Map the five captions into one image-path
-        for _, row in self.img_labels.iterrows():
-            if row[0] in self.Dict:
-                self.Dict[row[0]].append(row[1])
-            else:
-                self.Dict[row[0]] = [row[1]]
-
+        # Generate dataframe of labels
         self.img_labels = pd.DataFrame.from_dict(
-            self.Dict, orient='index').reset_index()
+            self.dct,
+            orient='index',
+            columns=['1', '2', '3', '4', '5']
+        )
+        self.img_labels = self.img_labels.reset_index()
+        self.img_labels = self.img_labels.rename(columns={'index': 'img'})
 
-        self.img_labels = self.img_labels.rename(columns={'index': 'img_path'})
-
-        # Resize all pictures into the same dimensions. (probably a bit sus)
-        self.transform = torchvision.transforms.Resize([224, 224])
-        self.target_transform = target_transform
-        self.isForVisualization = isForVisualization
-
-        # Import the vocabs and inverse vocabs.
-        self.invVocab = inv_vocab
-        self.Vocab = vocab
-        self.maxLength = maxLength
+        # Import features
         self.features = load(open(self.feature_dir, "rb"))
 
     def __len__(self):
@@ -66,104 +67,79 @@ class ImageDataset(torch.utils.data.Dataset):
         return len(list(self.features.values())[0])
 
     def __getitem__(self, idx):
-
-        # We define the image path and the corresponding pandas column with the filename:
-        img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0])
-        image = read_image(img_path)
-
         # Draw a random number from 1 to 5
-        rand = np.random.randint(low=1, high=6, size=1)
+        rand = np.random.randint(low=1, high=6)
 
         # The number decides which caption we choose as label
-        label = self.img_labels.iloc[idx, rand[0]]
+        label = self.img_labels.iloc[idx, rand]
+        labelEncoded = tokenizeCaptions(label, vocab=vocab, maxLength=max_len)
 
-        labelEncoded = tokenizeCaptions(
-            label, self.Vocab, maxLength=self.maxLength)
-
+        # Loading the features of the given image
         featureVector = self.features.get(self.img_labels.iloc[idx, 0])
 
-        if self.transform:
-            image = self.transform(image)
-
-        if self.target_transform:
-            label = self.target_transform(label)
-
-        if self.isForVisualization:
-            return image, label
-        else:
-            return label, torch.LongTensor(labelEncoded), torch.Tensor(featureVector)
+        return label, torch.LongTensor(labelEncoded), torch.Tensor(featureVector)
 
 
 class Images(torch.utils.data.Dataset):
-    def __init__(self, annotations_file, maxLength, transform=None, target_transform=None):
-        self.img_dir = os.path.join('data', 'images/')
+    def __init__(self, annotations_file):
+        self.img_dir = os.path.join('data', 'images')
         self.annotations_file = os.path.join('data', 'texts', annotations_file)
-        self.feature_dir = os.path.join('data', 'features', 'features.p')
 
-        self.img_labels = pd.read_csv(
-            self.annotations_file, sep='#\d+\t', header=None, names=['path', 'text'], engine='python').reset_index(drop=True)
+        # Load labels
+        self.dct = dict()
+        with open(self.annotations_file) as f:
+            for line in f.readlines():
+                line = line.strip()
+                img, label = re.split('#\d\t', line)
+                self.dct[img] = self.dct.get(img, []) + [label]
 
-        self.Dict = dict()
-
-        # Map the five captions into one image-path
-        for _, row in self.img_labels.iterrows():
-            if row[0] in self.Dict:
-                self.Dict[row[0]].append(row[1])
-            else:
-                self.Dict[row[0]] = [row[1]]
-
+        # Generate dataframe of labels
         self.img_labels = pd.DataFrame.from_dict(
-            self.Dict, orient='index').reset_index()
-
-        self.img_labels = self.img_labels.rename(columns={'index': 'img_path'})
+            self.dct,
+            orient='index',
+            columns=['1', '2', '3', '4', '5']
+        )
+        self.img_labels = self.img_labels.reset_index()
+        self.img_labels = self.img_labels.rename(columns={'index': 'img'})
 
         # Resize all pictures into the same dimensions. (probably a bit sus)
         self.transform = torchvision.transforms.Resize([224, 224])
-        self.target_transform = target_transform
-
-        # Import the vocabs and inverse vocabs.
-        self.invVocab = inv_vocab
-        self.Vocab = vocab
-        self.maxLength = maxLength
 
     def __len__(self):
         return len(self.img_labels)
 
     def __getitem__(self, idx):
+        name = self.img_labels.iloc[idx, 0]
 
-        # We define the image path and the corresponding pandas column with the filename:
-        img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0])
+        img_path = os.path.join(self.img_dir, name)
         image = read_image(img_path)
+        image = self.transform(image)
 
-        # Draw a random number from 1 to 5
-        rand = np.random.randint(low=1, high=6, size=1)
+        label = self.img_labels.iloc[idx, 1]
 
-        # The number decides which caption we choose as label
-        label = self.img_labels.iloc[idx, rand[0]]
+        return image, name, label
 
-        if self.transform:
-            image = self.transform(image)
-
-        if self.target_transform:
-            label = self.target_transform(label)
-
-        else:
-            return image.float(), self.img_labels.iloc[idx, 0]
 
 if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+    from torch.utils.data import DataLoader
+
     # Define the paths for labels and imagss
-    annotationsFile = 'labels.txt'
-    imgPath = 'data/images/'
+    annotationsFile = 'train_labels.txt'
 
     # Initialzie dataset class and into the loader.
-    Dataset = ImageDataset(annotationsFile, maxLength=max_len)
-    data_loader = DataLoader(Dataset, batch_size=1, shuffle=True)
+    dataset = ImageDataset(annotationsFile)
+
+    for x, y, z in dataset:
+        print(x, y, z)
+        break
 
     # get some images
+    dataset = Images(annotationsFile)
+    data_loader = DataLoader(dataset, batch_size=1, shuffle=True)
     dataiter = iter(data_loader)
-    images, labels = dataiter.next()
+    images, names, labels = dataiter.next()
 
-    images, labels = dataiter.next()
     for image, label in zip(images, labels):  # Run through all samples in a batch
         plt.figure()
         plt.imshow(np.transpose(image.numpy(), (1, 2, 0)))

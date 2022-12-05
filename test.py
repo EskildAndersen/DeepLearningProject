@@ -14,14 +14,14 @@ EOS_token = vocab.get('<EOS>')
 PAD_token = vocab.get('<PAD>')
 vocab_size = len(vocab)
 
-Dataset = ImageDataset('labels.txt', maxLength=max_len)
+Dataset = ImageDataset('labels.txt')
 
 trainloader = torch.utils.data.DataLoader(Dataset,
                                           batch_size=1,
                                           shuffle=True)
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-device = torch.device("cpu")
+#device = torch.device("cpu")
 torch.cuda.empty_cache()
 
 lenFeature = Dataset.__getFeatureLen__()
