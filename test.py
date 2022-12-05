@@ -57,8 +57,9 @@ def train(input_feature, input_sentence, target_sentence,
 
     # Encoder loop
     for i in range(1, max_length):
-        padding = torch.LongTensor([PAD_token for _ in range(max_length-i)])
-        text_in = torch.cat((input_sentence[0][:i], padding))
+        padding = torch.LongTensor(
+            [PAD_token for _ in range(max_length-i)]).to(device)
+        text_in = torch.cat((input_sentence[0][:i], padding)).to(device)
 
         output, encoder_hidden = encoder(
             text_in, input_feature, encoder_hidden)
@@ -71,7 +72,7 @@ def train(input_feature, input_sentence, target_sentence,
     for o, t in zip(output, target_sentence):
         pass
         loss += criterion(o, t)
-        
+
     loss.backward()
     encoder_optimizer.step()
     decoder_optimizer.step()
@@ -86,13 +87,13 @@ def trainIters(encoder, decoder, optimizer, n_iters, print_every, plot_every, lr
 
     encoder_optimizer = optimizer(encoder.parameters(), lr=lr)
     decoder_optimizer = optimizer(encoder.parameters(), lr=lr)
-    criterion = nn.NLLLoss()
+    criterion = nn.NLLLoss()    # nn.CrossEntropyLoss()
 
     for iter in range(n_iters):
         for i, (label, sentence, feature) in enumerate(trainloader):
             target = torch.Tensor(
                 F.one_hot(sentence.squeeze(0), vocab_size))
-            loss = train(feature, sentence, target, encoder, decoder,
+            loss = train(feature.to(device), sentence.to(device), target.to(device), encoder, decoder,
                          encoder_optimizer, decoder_optimizer, criterion)
 
             print_loss_total += loss

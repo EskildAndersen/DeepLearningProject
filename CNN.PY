@@ -8,67 +8,65 @@ import pandas as pd
 import torchvision
 from torch.utils.data import Dataset, DataLoader
 import matplotlib.pyplot as plt
-from DataPreparator import ImageDataset
+from DataPreparator import ImageDataset, Images
 from json import dump
 from pickle import dump, load
-
-model = models.vgg16(weights=True)
-
-model
-# CNN finetuned
-
-txtFilePath = 'data/texts/Flickr8k.token.txt'
-imgPath = 'data/images/'
-
-# Initialzie dataset class and into the loader.
-dataset = ImageDataset(txtFilePath, imgPath)
-#data_loader = DataLoader(Dataset, batch_size=64, shuffle=True)
-#testData, trainData = torch.utils.data.random_split(dataset, [2000, 6092])
-trainLoader = DataLoader(trainData, batch_size=1, shuffle=False)
-testLoader = DataLoader(testData, batch_size=1, shuffle=False)
-dataLoader = DataLoader(dataset, batch_size=1, shuffle=False)
-
-# Quick fix to remove final layers
-x = list(model.children())[:-1]
-model = x[0]
-
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters())
-
-nEpocs = 1  # How many times should we run over the data set?
-totaliter = 0
-model.train()
-model.to(device)
-
-# Extract features!
-
-Features = {}
-for epoch in range(nEpocs):  # loop over the dataset multiple times
-    # scheduler.step()
-    for i, data in enumerate(dataLoader, 0):
-
-        inputs, labels, img_path = data
-
-        outputs = model(inputs.float().to(device))
-
-        Features[img_path[0]] = outputs.flatten().cpu().detach().numpy()
-
-        if i % 100 == 0:
-
-            print(i)
-    print('Epoch %d, Train loss: %.3f' % (epoch + 1, running_loss / 100))
-
-    running_loss = 0.0
-
-print('Finished Training')
-# .eval()
+from vocabulary import max_len
 
 
-dump(Features, open("features.p", "wb"))
-# pd.DataFrame.from_dict(
-#             Features, orient='index').reset_index().to_csv('test.csv')
+class CNNPreTrain(nn.Module):
+    def __init__(self):
+        super(CNNPreTrain, self).__init__()
+        vgg16 = models.vgg16(pretrained=True)
+        for param in vgg16.parameters():
+            param.requires_grad_(False)
+
+        # Remove linear and pool layers (since we're not doing classification)
+        modules = list(vgg16.children())[:-1][:-1][0][:-1]
+        self.vgg16 = nn.Sequential(*modules)
+
+    def forward(self, images):
+
+        # Feed images through VGG16
+        features = self.vgg16(images)
+        features = features.view(features.size(0), -1)
+
+        return features
+
+    def fine_tune(self, fine_tune=True):
+        """
+        Allow or prevent the computation of gradients for convolutional blocks 2 through 4 of the encoder.
+        :param fine_tune: Allow?
+        """
+
+        for p in self.vgg16.parameters():
+            p.requires_grad = False
+        # If fine-tuning, only fine-tune convolutional blocks 2 through 4
+        for c in list(self.vgg16.children())[5:]:
+            for p in c.parameters():
+                p.requires_grad = fine_tune
 
 
-features = load(open("data/features/features.p", "rb"))
+if __name__ == '__main__':
+    txtFilePath = 'labels.txt'
+    dataset = Images(txtFilePath, maxLength=max_len)
+    dataLoader = DataLoader(dataset, batch_size=1, shuffle=False)
+
+    # specify dim of image embedding
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    nEpocs = 1
+    CNN = CNNPreTrain()
+    CNN.to(device)
+
+    Features = {}
+    for epoch in range(nEpocs):  # loop over the dataset multiple times
+        for i, data in enumerate(dataLoader):
+            image, img_path = data[0], data[1]
+            features = CNN(image.to(device))
+            Features[img_path[0]] = features.cpu().detach().numpy()
+            if i % 100 == 0:
+                print(i)
+
+    dump(Features, open("features.p", "wb"))
+
+    features = load(open("features.p", "rb"))
