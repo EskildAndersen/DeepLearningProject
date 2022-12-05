@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
+import os
 from CaptionCoder import deTokenizeCaptions
 from EncoderDecoder import Encoder, Decoder
 from DataPreparator import ImageDataset
@@ -15,7 +16,6 @@ learning_rate = 0.05
 
 # Setting up device
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-device = torch.device("cpu")
 
 # Training dataset
 train_dataset = ImageDataset('train_labels.txt')
@@ -30,9 +30,9 @@ lenFeature = train_dataset.__getFeatureLen__()
 # Encoder and decoder setup
 encoder = Encoder(input_size=max_len, hidden_size=hidden_size,
                   feature_len=lenFeature, vocab_len=vocab_size,
-                  padding_index=PAD_token)
+                  padding_index=PAD_token, device=device).to(device)
 decoder = Decoder(input_size=hidden_size,
-                  hidden_size=hidden_size, vocab_size=vocab_size)
+                  hidden_size=hidden_size, vocab_size=vocab_size, device=device).to(device)
 
 
 for x, y, z in trainloader:
@@ -77,7 +77,7 @@ def train(input_feature, input_sentence, target_sentence,
     encoder_optimizer.step()
     decoder_optimizer.step()
 
-    return loss.item()
+    return loss.item(), output
 
 
 def trainIters(encoder, decoder, optimizer, n_iters, print_every, plot_every, lr):
@@ -93,7 +93,7 @@ def trainIters(encoder, decoder, optimizer, n_iters, print_every, plot_every, lr
         for i, (label, sentence, feature) in enumerate(trainloader):
             target = torch.Tensor(
                 F.one_hot(sentence.squeeze(0), vocab_size))
-            loss = train(feature.to(device), sentence.to(device), target.to(device), encoder, decoder,
+            loss, output = train(feature.to(device), sentence.to(device), target.to(device), encoder, decoder,
                          encoder_optimizer, decoder_optimizer, criterion)
 
             print_loss_total += loss
@@ -102,7 +102,10 @@ def trainIters(encoder, decoder, optimizer, n_iters, print_every, plot_every, lr
             if i % print_every == 0:
                 print_loss_avg = print_loss_total / print_every
                 print_loss_total = 0
-                print(f'{print_loss_avg} : {i}')
+                output_sentence = output.argmax(1)
+                print(f'{print_loss_avg} : {i} - {deTokenizeCaptions(output_sentence)}')
+                torch.save(encoder, 'encoder_model.pt')
+                torch.save(decoder, 'decoder_model.pt')
 
             if i % plot_every == 0:
                 plot_loss_avg = plot_loss_total / plot_every
@@ -112,4 +115,6 @@ def trainIters(encoder, decoder, optimizer, n_iters, print_every, plot_every, lr
 
 if __name__ == '__main__':
     trainIters(encoder, decoder, optimizer=optim.Adam, n_iters=3,
-               print_every=1, plot_every=100, lr=0.004)
+               print_every=100, plot_every=100, lr=0.004)
+    
+

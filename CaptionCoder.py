@@ -18,7 +18,7 @@ def tokenizeCaptions(sentence):
 def deTokenizeCaptions(tokenizedSentence, asString=False):
     global inv_vocab
 
-    outputSentence = [inv_vocab.get(word) for word in tokenizedSentence]
+    outputSentence = [inv_vocab.get(int(word)) for word in tokenizedSentence]
 
     if asString:
         removeTokens = ["<SOS>", "<EOS>", "<PAD>"]
