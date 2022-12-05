@@ -21,7 +21,7 @@ trainloader = torch.utils.data.DataLoader(Dataset,
                                           shuffle=True)
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-#device = torch.device("cpu")
+device = torch.device("cpu")
 torch.cuda.empty_cache()
 
 lenFeature = Dataset.__getFeatureLen__()
@@ -34,9 +34,10 @@ encoder = Encoder(input_size=max_len, hidden_size=hidden_size,
 decoder = Decoder(input_size=hidden_size,
                   hidden_size=hidden_size, vocab_size=len(vocab), device=device).to(device)
 
-learning_rate = 0.05
+learning_rate = 0.2
 encoder_optimizer = optim.Adam(encoder.parameters(), lr=learning_rate)
 decoder_optimizer = optim.Adam(decoder.parameters(), lr=learning_rate)
+
 
 def train(input_feature, input_sentence, target_sentence,
           encoder, decoder, encoder_optimizer, decoder_optimizer,
@@ -52,7 +53,8 @@ def train(input_feature, input_sentence, target_sentence,
 
     # Encoder loop
     for i in range(1, max_length):
-        padding = torch.LongTensor([PAD_token for _ in range(max_length-i)]).to(device)
+        padding = torch.LongTensor(
+            [PAD_token for _ in range(max_length-i)]).to(device)
         text_in = torch.cat((input_sentence[0][:i], padding)).to(device)
 
         output, encoder_hidden = encoder(
@@ -60,14 +62,13 @@ def train(input_feature, input_sentence, target_sentence,
         encoder_outputs[i] = output
         pass
 
-    pass
     output = decoder(encoder_outputs)
     # sentence = deTokenizeCaptions(np.array(output_sentence), inv_vocab)
 
     for o, t in zip(output, target_sentence):
         pass
         loss += criterion(o, t)
-        
+
     loss.backward()
     encoder_optimizer.step()
     decoder_optimizer.step()
@@ -82,7 +83,7 @@ def trainIters(encoder, decoder, n_iters, print_every, plot_every, lr):
 
     encoder_optimizer = optim.Adam(encoder.parameters(), lr=lr)
     decoder_optimizer = optim.Adam(encoder.parameters(), lr=lr)
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.NLLLoss()  # nn.CrossEntropyLoss()
 
     for iter in range(n_iters):
         for i, (label, sentence, feature) in enumerate(trainloader):
