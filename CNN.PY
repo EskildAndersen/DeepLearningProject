@@ -22,7 +22,7 @@ class CNNPreTrain(nn.Module):
             param.requires_grad_(False)
 
         # Remove linear and pool layers (since we're not doing classification)
-        modules = list(vgg16.children())[:-1][:-1][0][:-1]
+        modules = list(vgg16.children())[:-1]
         self.vgg16 = nn.Sequential(*modules)
 
     def forward(self, images):
@@ -49,7 +49,7 @@ class CNNPreTrain(nn.Module):
 
 if __name__ == '__main__':
     txtFilePath = 'labels.txt'
-    dataset = Images(txtFilePath, maxLength=max_len)
+    dataset = Images(txtFilePath)
     dataLoader = DataLoader(dataset, batch_size=1, shuffle=False)
 
     # specify dim of image embedding
