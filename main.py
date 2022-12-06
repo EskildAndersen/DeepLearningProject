@@ -69,12 +69,9 @@ def trainIters(encoder, decoder, optimizer, n_iters, print_every, plot_every, lr
     encoder_optimizer = optimizer(encoder.parameters(), lr=lr)
     decoder_optimizer = optimizer(decoder.parameters(), lr=lr)
     criterion = nn.CrossEntropyLoss(reduction='mean')
-    # criterion = nn.NLLLoss()
 
     for iter in range(n_iters):
         for i, (_, sentences, features) in enumerate(trainloader):
-            if i == 10:
-                break
             
             sentences = sentences.to(device)
             features = features.to(device)
@@ -170,7 +167,7 @@ if __name__ == '__main__':
     learning_rate = 0.0005
     print_every = 6000//(batch_size * 10)
     plot_every = 10
-    n_iter = 1
+    n_iter = 100
     optimizer = optim.Adam
     number_layers = 5
 

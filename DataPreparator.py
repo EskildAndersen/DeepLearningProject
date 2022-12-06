@@ -108,8 +108,8 @@ class Images(torch.utils.data.Dataset):
 
         if self.transform:
             nn.Sequential(
-                                            # smaller edge of image resized to 256
-                T.transforms.Resize(224),
+                                            
+                T.transforms.Resize(224),        # Resize image
                 T.transforms.Normalize(
                     self.mean,                   # Normalize data
                     self.std))
