@@ -1,16 +1,14 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
-import numpy as np
 from CaptionCoder import deTokenizeCaptions
 from EncoderDecoder import FeatureEncoder, DecoderWithAttention
 from DataPreparator import ImageDataset
 from vocabulary import max_len, vocab_size
-    
 import matplotlib.pyplot as plt
 plt.switch_backend('agg')
 import matplotlib.ticker as ticker
+from torchviz import make_dot
 
 
 def train(
@@ -27,7 +25,7 @@ def train(
     decoder_optimizer.zero_grad()
     encoder_optimizer.zero_grad()
 
-    loss = 0
+    loss = 0    
 
     # (batch_size, encoder_output_size)
     encoder_output = encoder(input_features)
@@ -37,7 +35,7 @@ def train(
 
     for word_idx in range(1, max_len):
         input_decoder = input_sentences[:, 0:word_idx]
-        
+
         output, (hidden, cell) = decoder(
             input_decoder,
             encoder_output,
@@ -172,7 +170,7 @@ if __name__ == '__main__':
     number_layers = 5
 
     # Setting up device
-    device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # Training dataset
     train_dataset = ImageDataset('train_labels.txt')

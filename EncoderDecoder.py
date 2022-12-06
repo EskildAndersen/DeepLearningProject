@@ -1,7 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
 from vocabulary import PAD_token
 # Så vi skal basically finde ud hidden size som skal encodes. Dernæst hvad gør nn.Encoding præcist?
 # nn.GRU = multi-layer gated recurrent unit
@@ -57,7 +55,7 @@ class FeatureEncoder(nn.Module):
         denseFeature = self.dropout(denseFeature)
         output = self.relu(denseFeature)  # (batch_size, output_size)
 
-        return x
+        return output
 
 
 class DecoderWithAttention(nn.Module):

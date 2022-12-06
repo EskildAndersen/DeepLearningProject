@@ -31,7 +31,7 @@ class ImageDataset(Dataset):
         # Set paths
         self.img_dir = os.path.join('data', 'images')
         self.annotations_file = os.path.join('data', 'texts', annotations_file)
-        self.feature_dir = os.path.join('data', 'features', 'newfeatures.p')
+        self.feature_dir = os.path.join('data', 'features', 'features.p')
 
         # Load labels
         self.dct = dict()
