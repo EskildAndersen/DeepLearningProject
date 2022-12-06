@@ -16,6 +16,7 @@ import random
 import os
 import os
 import pandas as pd
+import torchvision.transforms as T
 import glob
 from torchvision.io import read_image
 import torchvision
@@ -38,7 +39,7 @@ class ImageDataset(Dataset):
         # Set paths
         self.img_dir = os.path.join('data', 'images')
         self.annotations_file = os.path.join('data', 'texts', annotations_file)
-        self.feature_dir = os.path.join('data', 'features', 'features.p')
+        self.feature_dir = os.path.join('data', 'features', 'newfeatures.p')
 
         # Load labels
         self.dct = dict()
@@ -103,7 +104,19 @@ class Images(torch.utils.data.Dataset):
         self.img_labels = self.img_labels.rename(columns={'index': 'img'})
 
         # Resize all pictures into the same dimensions. (probably a bit sus)
-        self.transform = torchvision.transforms.Resize([224, 224])
+        self.mean = None
+        self.std = None
+
+        self.transform = nn.Sequential(
+            # smaller edge of image resized to 256
+            T.transforms.Resize(256),
+            # get 224x224 crop from random location
+            T.transforms.RandomCrop(224),
+            # horizontally flip image with probability=0.5
+            T.transforms.RandomHorizontalFlip(),
+            T.transforms.Normalize(
+                (117.9994, 113.3671, 102.7541),  # Normalize data
+                (70.1257, 68.0825, 71.3111)))
 
     def __len__(self):
         return len(self.img_labels)
@@ -112,7 +125,8 @@ class Images(torch.utils.data.Dataset):
         name = self.img_labels.iloc[idx, 0]
 
         img_path = os.path.join(self.img_dir, name)
-        image = read_image(img_path)
+        image = read_image(img_path).float()
+
         image = self.transform(image)
 
         label = self.img_labels.iloc[idx, 1]
@@ -120,12 +134,25 @@ class Images(torch.utils.data.Dataset):
         return image, name, label
 
 
+calculateMeanAndStd = False
+if calculateMeanAndStd:
+    image_data = Images('labels.txt')
+    image_data_loader = DataLoader(
+        image_data,
+        # batch size is whole dataset
+        batch_size=len(image_data),
+        shuffle=False)
+
+    images, labels, _ = next(iter(image_data_loader))
+    # shape of images = [b,c,w,h]
+    mean, std = images.mean([0, 2, 3]), images.std([0, 2, 3])
+
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
     from torch.utils.data import DataLoader
 
     # Define the paths for labels and imagss
-    annotationsFile = 'train_labels.txt'
+    annotationsFile = 'labels.txt'
 
     # Initialzie dataset class and into the loader.
     dataset = ImageDataset(annotationsFile)
