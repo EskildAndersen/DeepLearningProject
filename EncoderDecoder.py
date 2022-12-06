@@ -70,7 +70,7 @@ class DecoderWithAttention(nn.Module):
         hidden_len,
         encoder_output_len,
         device,
-        dropout=0.1,
+        drop_prob=0.1,
         pad_token=PAD_token,
     ):
         super(DecoderWithAttention, self).__init__()
@@ -83,6 +83,11 @@ class DecoderWithAttention(nn.Module):
         self.pad_token = pad_token
         
         self.max_norm = None
+        self.number_layers = 5
+        self.bidirectional = False
+        
+        self.dropout = nn.Dropout(drop_prob)
+        self.relu = nn.ReLU()
         
         self.embedding = nn.Embedding(
             self.vocab_size,
@@ -94,53 +99,89 @@ class DecoderWithAttention(nn.Module):
         self.lstm = nn.LSTM(
             self.sentence_len,
             self.hidden_size,
-            batch_first=True
+            batch_first=True,
+            dropout=drop_prob,
+            num_layers=self.number_layers,
+            bidirectional=self.bidirectional,
         )
         
-        self.dropout = nn.Dropout(dropout)
-        self.relu = nn.ReLU()
+        self.attention = self.get_score
         self.att_softmax = nn.Softmax(dim=1)
-        self.Linear1 = nn.Linear(
+        
+        self.LinearMap1 = nn.Linear(
             in_features=self.concat_size,
             out_features=self.hidden_size,
         )
-        self.LinearOut = nn.Linear(
+        self.LinearMap2 = nn.Linear(
             in_features=self.hidden_size,
             out_features=self.vocab_size,
         )
         
+        self.soft_max = nn.LogSoftmax(dim=2)
+        
+        
     def forward(
         self,
         sentences,  # (batch_size, sentence_len)
-        encoded_features,    # (batch_size, encoded_output_size)
-        encoder_hidden,
-        encoder_cell,
+        encoder_features,    # encoder_outputs (batch_size, encoder_output_size)
+        init_hidden,
+        init_cell,
     ):
         # Embedding
         embedded = self.embedding(sentences)
         embedded = self.dropout(embedded)
         
-        # Attention
-        scores = self.get_score(embedded, encoder_hidden)
-        alphas = self.att_softmax(scores)
-        alphas = alphas.unsqueeze(2)
-        context_vector = torch.bmm(alphas, encoded_features)
+        # Generate new hidden state for decoder
+        lstm_out, (hidden, cell) = self.lstm(
+            embedded, 
+            (init_hidden, init_cell)  # Because hidden og cell needs (D * number of layers, batch_size, hidden_size)
+        )
         
-        # "Do Something"
-        output = torch.cat((embedded, context_vector), dim=-1)
-        output = self.Linear1(output)
+        # Calculate allignment scores
+        allignment_scores = self.attention(lstm_out, encoder_features.unsqueeze(1))
+        
+        # Softmax allignment_scores to obtain attention weights
+        attn_weights = self.att_softmax(allignment_scores)
+        
+        # Calculating context vector
+        context_vector = torch.bmm(
+            attn_weights.unsqueeze(2), 
+            encoder_features.unsqueeze(1)
+        )
+        
+        # Calculate fines decoder output
+        output = torch.cat((lstm_out, context_vector), dim=-1)
+        
+        # Classify concatenated vector to vocab
+        output = self.LinearMap1(output)
         output = self.relu(output)
+        output = self.LinearMap2(output)
         
-        # LSTM
-        output, hidden = self.lstm(output, (encoder_hidden, encoder_cell))
-        output = self.LinearOut(output)
+        # Softmax output to get prediction probability
+        # output = self.soft_max(output)
+        # prediction = prediction.argmax(2).squeeze(-1)
         
-        return output, hidden
+        return output, (hidden, cell)
 
     
     def getInitialHidden(self, batch_size, encoded_output_size):
-        hidden = torch.zeros((batch_size, encoded_output_size)).to(self.device)
-        cell = torch.zeros((batch_size, encoded_output_size)).to(self.device)
+        layers = self.number_layers
+        size_0 = layers if not self.bidirectional else layers * 2
+        hidden = torch.zeros(
+            (
+                size_0, 
+                batch_size, 
+                encoded_output_size
+            )
+        ).to(self.device)
+        
+        cell = torch.zeros(
+            (
+                self.number_layers, 
+                batch_size, 
+                encoded_output_size
+            )
+        ).to(self.device)
 
         return hidden, cell
     

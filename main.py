@@ -18,34 +18,37 @@ def train(
     encoder_optimizer,
     decoder_optimizer,
     criterion,
-): 
+):
     global vocab_size
-        
+
     decoder_optimizer.zero_grad()
     encoder_optimizer.zero_grad()
 
     loss = 0
-    
-    encoder_output = encoder(input_features)   # (batch_size, encoder_output_size)
+
+    # (batch_size, encoder_output_size)
+    encoder_output = encoder(input_features)
     batch_size, encoder_output_size = encoder_output.shape
-    
+
     hidden, cell = decoder.getInitialHidden(batch_size, encoder_output_size)
-    
+
     input_sentences = torch.full((batch_size, 1), SOS_token).to(device)
-    
-    for word_idx in range(max_len):
+
+    for word_idx in range(1, max_len):
         output, (hidden, cell) = decoder(
-            input_sentences, 
-            encoder_output, 
-            hidden, 
+            input_sentences,
+            encoder_output,
+            hidden,
             cell
         )
-        
-        loss += criterion(output, target_sentence[word_idx + 1])
-        input_sentences = target_sentence[word_idx + 1]
-    
+
+        input_sentences = target_sentence[:, 0:word_idx + 1]
+        target = input_sentences[:, 1:]
+        loss += criterion(output.permute(0, 2, 1), target)
+        pass
+
     # Else teachers forcing
-    
+
     loss.backward()
     encoder_optimizer.step()
     decoder_optimizer.step()
@@ -57,10 +60,14 @@ def trainIters(encoder, decoder, optimizer, n_iters, print_every, plot_every, lr
     plot_losses = []
     print_loss_total = 0
     plot_loss_total = 0
+    
+    encoder.train()
+    decoder.train()
 
     encoder_optimizer = optimizer(encoder.parameters(), lr=lr)
     decoder_optimizer = optimizer(decoder.parameters(), lr=lr)
     criterion = nn.CrossEntropyLoss(reduction='mean')
+    # criterion = nn.NLLLoss()
 
     for iter in range(n_iters):
         for i, (_, sentences, features) in enumerate(trainloader):
@@ -87,6 +94,7 @@ def trainIters(encoder, decoder, optimizer, n_iters, print_every, plot_every, lr
                 print(
                     f'{print_loss_avg} : {i} - {deTokenizeCaptions(output_sentence)}')
                 torch.save(encoder, 'encoder_model.pt')
+                torch.save(decoder, 'decoder_model.pt')
 
             if (i+1) % plot_every == 0:
                 plot_loss_avg = plot_loss_total / plot_every
@@ -98,6 +106,7 @@ if __name__ == '__main__':
     # Parameters
     batch_size = 32
     hidden_size = 256
+    output_size = hidden_size
     learning_rate = 0.0005
 
     # Setting up device
@@ -111,22 +120,20 @@ if __name__ == '__main__':
         shuffle=True
     )
     lenFeature = train_dataset.__getFeatureLen__()
-    
-    
+
     encoder = FeatureEncoder(
         feature_len=lenFeature,
-        output_len=hidden_size,
+        output_len=output_size,
         device=device,
     ).to(device)
-    
+
     decoder = DecoderWithAttention(
         vocab_len=vocab_size,
         sentence_len=max_len,
         hidden_len=hidden_size,
-        encoder_output_len=hidden_size,
+        encoder_output_len=output_size,
         device=device,
     ).to(device)
-    
-    
+
     trainIters(encoder, decoder, optimizer=optim.Adam, n_iters=3,
-               print_every=10, plot_every=100, lr=learning_rate)
+               print_every=1, plot_every=100, lr=learning_rate)

@@ -47,7 +47,7 @@ class ImageDataset(Dataset):
         return len(self.img_labels)
 
     def __getFeatureLen__(self):
-        return len(list(self.features.values())[0])
+        return len(list(self.features.values())[0][0])
 
     def __getitem__(self, idx):
         # Draw a random number from 1 to 5
