@@ -109,7 +109,8 @@ def trainIters(encoder, decoder, optimizer, n_iters, print_every, plot_every, lr
 def evaluateLoop(   
         encoder,
         decoder,
-        data,):
+        data,
+    ):
 
         for _,input_features, input_sentences in data:
 
@@ -119,7 +120,7 @@ def evaluateLoop(
             hidden, cell = decoder.getInitialHidden(batch_size, encoder_output_size)
             SOS = input_sentences[:,:1]
             for word_idx in range(1, max_len):
-                input_decoder = torch.cat((SOS,predictions),dim = -1)
+                input_decoder = torch.cat((SOS,predictions), dim = -1)
                 outputs, (hidden, cell) = decoder(
                     input_decoder,
                     encoder_output,
@@ -142,7 +143,8 @@ def showPlot(points):
 
 
 def saveLosses(losses, **kwargs):
-    file = '+'.join(['_'.join((f'{k}', f'{w}')) for k, w in kwargs.items()])
+    filename = '+'.join(['_'.join((f'{k}', f'{w}')) for k, w in kwargs.items()])
+    file = f'{filename}.txt'
     
     with open(file, 'w') as f:
         for loss in losses:
