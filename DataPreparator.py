@@ -1,19 +1,30 @@
 '''
+
+Script to generate data class
+
+This script assusmes that path is structured as mentioend in readme.
+
+'''
+from torch.utils.data import Dataset
+import re
+import torch
+import torch.nn as nn
+import numpy as np
+import os
+import os
+import pandas as pd
+import torchvision.transforms as T
+from torchvision.io import read_image
+from torch.utils.data import Dataset, DataLoader
+import matplotlib.pyplot as plt
+from pickle import load
+from CaptionCoder import tokenizeCaptions
+
+'''
 Script to generate data class
 
 This script assusmes that path is structured as mentioend in readme.
 '''
-import torch
-import numpy as np
-import os
-import re
-import pandas as pd
-from torchvision.io import read_image
-import torchvision
-from torch.utils.data import Dataset
-from pickle import load
-from CaptionCoder import tokenizeCaptions
-
 
 class ImageDataset(Dataset):
     def __init__(self, annotations_file):
@@ -32,7 +43,7 @@ class ImageDataset(Dataset):
 
         # Generate dataframe of labels
         self.img_labels = pd.DataFrame.from_dict(
-            self.dct, 
+            self.dct,
             orient='index',
             columns=['1', '2', '3', '4', '5']
         )
@@ -41,7 +52,6 @@ class ImageDataset(Dataset):
 
         # Import features
         self.features = load(open(self.feature_dir, "rb"))
-
 
     def __len__(self):
         return len(self.img_labels)
@@ -64,10 +74,13 @@ class ImageDataset(Dataset):
 
 
 class Images(torch.utils.data.Dataset):
-    def __init__(self, annotations_file):
+    def __init__(self, annotations_file, mean, std, transform = None):
         self.img_dir = os.path.join('data', 'images')
         self.annotations_file = os.path.join('data', 'texts', annotations_file)
-        
+        self.transform = transform
+        self.mean = mean
+        self.std = std
+
         # Load labels
         self.dct = dict()
         with open(self.annotations_file) as f:
@@ -78,47 +91,61 @@ class Images(torch.utils.data.Dataset):
 
         # Generate dataframe of labels
         self.img_labels = pd.DataFrame.from_dict(
-            self.dct, 
+            self.dct,
             orient='index',
             columns=['1', '2', '3', '4', '5']
         )
         self.img_labels = self.img_labels.reset_index()
         self.img_labels = self.img_labels.rename(columns={'index': 'img'})
 
-        # Resize all pictures into the same dimensions. (probably a bit sus)
-        self.transform = torchvision.transforms.Resize([224, 224])
-
     def __len__(self):
         return len(self.img_labels)
 
     def __getitem__(self, idx):
         name = self.img_labels.iloc[idx, 0]
-        
+
         img_path = os.path.join(self.img_dir, name)
-        image = read_image(img_path)
-        image = self.transform(image)
-    
+
+        if self.transform:
+            nn.Sequential(
+                                            # smaller edge of image resized to 256
+                T.transforms.Resize(224),
+                T.transforms.Normalize(
+                    self.mean,                   # Normalize data
+                    self.std))
+            image = read_image(img_path).float()
+        else:
+            image = read_image(img_path)
+
         label = self.img_labels.iloc[idx, 1]
-        
+
         return image, name, label
 
-if __name__ == "__main__":
-    import matplotlib.pyplot as plt
-    from torch.utils.data import DataLoader
-    
+# Calculate mean and std of all pictures (takes alot of time!!)
+calculateMeanAndStd = False
+
+if calculateMeanAndStd:
+    image_data = Images('labels.txt')
+    image_data_loader = DataLoader(
+        image_data,
+        # batch size is whole dataset
+        batch_size=len(image_data),
+        shuffle=False)
+
+    images, _, _ = next(iter(image_data_loader))
+
+    # shape of images = [b,c,w,h]
+    mean, std = images.mean([0, 2, 3]), images.std([0, 2, 3])
+
+if __name__ == '__main__':
+
     # Define the paths for labels and imagss
-    annotationsFile = 'train_labels.txt'
+    annotationsFile = 'labels.txt'
 
-    # Initialzie dataset class and into the loader.
-    dataset = ImageDataset(annotationsFile)
+    mean, std = (117.9994, 113.3671, 102.7541), (70.1257, 68.0825, 71.3111) 
 
-    for x, y, z in dataset:
-        print(x, y, z)
-        break
-    
-    
     # get some images
-    dataset = Images(annotationsFile)
+    dataset = Images(annotationsFile, mean, std)
     data_loader = DataLoader(dataset, batch_size=1, shuffle=True)
     dataiter = iter(data_loader)
     images, names, labels = dataiter.next()
