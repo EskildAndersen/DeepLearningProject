@@ -9,30 +9,22 @@ from torch.utils.data import Dataset
 import re
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
 import numpy as np
-import random
 import os
 import os
 import pandas as pd
 import torchvision.transforms as T
-import glob
 from torchvision.io import read_image
-import torchvision
 from torch.utils.data import Dataset, DataLoader
 import matplotlib.pyplot as plt
 from pickle import load
-from vocabulary import inv_vocab, vocab, max_len
 from CaptionCoder import tokenizeCaptions
-
 
 '''
 Script to generate data class
 
 This script assusmes that path is structured as mentioend in readme.
 '''
-
 
 class ImageDataset(Dataset):
     def __init__(self, annotations_file):
@@ -65,7 +57,7 @@ class ImageDataset(Dataset):
         return len(self.img_labels)
 
     def __getFeatureLen__(self):
-        return len(list(self.features.values())[0])
+        return len(list(self.features.values())[0][0])
 
     def __getitem__(self, idx):
         # Draw a random number from 1 to 5
@@ -73,7 +65,7 @@ class ImageDataset(Dataset):
 
         # The number decides which caption we choose as label
         label = self.img_labels.iloc[idx, rand]
-        labelEncoded = tokenizeCaptions(label, vocab=vocab, maxLength=max_len)
+        labelEncoded = tokenizeCaptions(label)
 
         # Loading the features of the given image
         featureVector = self.features.get(self.img_labels.iloc[idx, 0])
@@ -82,9 +74,12 @@ class ImageDataset(Dataset):
 
 
 class Images(torch.utils.data.Dataset):
-    def __init__(self, annotations_file):
+    def __init__(self, annotations_file, mean, std, transform = None):
         self.img_dir = os.path.join('data', 'images')
         self.annotations_file = os.path.join('data', 'texts', annotations_file)
+        self.transform = transform
+        self.mean = mean
+        self.std = std
 
         # Load labels
         self.dct = dict()
@@ -103,21 +98,6 @@ class Images(torch.utils.data.Dataset):
         self.img_labels = self.img_labels.reset_index()
         self.img_labels = self.img_labels.rename(columns={'index': 'img'})
 
-        # Resize all pictures into the same dimensions. (probably a bit sus)
-        self.mean = None
-        self.std = None
-
-        self.transform = nn.Sequential(
-            # smaller edge of image resized to 256
-            T.transforms.Resize(256),
-            # get 224x224 crop from random location
-            T.transforms.RandomCrop(224),
-            # horizontally flip image with probability=0.5
-            T.transforms.RandomHorizontalFlip(),
-            T.transforms.Normalize(
-                (117.9994, 113.3671, 102.7541),  # Normalize data
-                (70.1257, 68.0825, 71.3111)))
-
     def __len__(self):
         return len(self.img_labels)
 
@@ -125,16 +105,25 @@ class Images(torch.utils.data.Dataset):
         name = self.img_labels.iloc[idx, 0]
 
         img_path = os.path.join(self.img_dir, name)
-        image = read_image(img_path).float()
 
-        image = self.transform(image)
+        if self.transform:
+            nn.Sequential(
+                                            
+                T.transforms.Resize(224),        # Resize image
+                T.transforms.Normalize(
+                    self.mean,                   # Normalize data
+                    self.std))
+            image = read_image(img_path).float()
+        else:
+            image = read_image(img_path)
 
         label = self.img_labels.iloc[idx, 1]
 
         return image, name, label
 
-
+# Calculate mean and std of all pictures (takes alot of time!!)
 calculateMeanAndStd = False
+
 if calculateMeanAndStd:
     image_data = Images('labels.txt')
     image_data_loader = DataLoader(
@@ -143,26 +132,20 @@ if calculateMeanAndStd:
         batch_size=len(image_data),
         shuffle=False)
 
-    images, labels, _ = next(iter(image_data_loader))
+    images, _, _ = next(iter(image_data_loader))
+
     # shape of images = [b,c,w,h]
     mean, std = images.mean([0, 2, 3]), images.std([0, 2, 3])
 
-if __name__ == "__main__":
-    import matplotlib.pyplot as plt
-    from torch.utils.data import DataLoader
+if __name__ == '__main__':
 
     # Define the paths for labels and imagss
     annotationsFile = 'labels.txt'
 
-    # Initialzie dataset class and into the loader.
-    dataset = ImageDataset(annotationsFile)
-
-    for x, y, z in dataset:
-        print(x, y, z)
-        break
+    mean, std = (117.9994, 113.3671, 102.7541), (70.1257, 68.0825, 71.3111) 
 
     # get some images
-    dataset = Images(annotationsFile)
+    dataset = Images(annotationsFile, mean, std)
     data_loader = DataLoader(dataset, batch_size=1, shuffle=True)
     dataiter = iter(data_loader)
     images, names, labels = dataiter.next()

@@ -22,6 +22,12 @@ _words = sorted(_words, reverse=False)
 vocab = {w: i for i, w in enumerate(_words)}
 inv_vocab = {i: w for w, i in vocab.items()}
 
+EOS_token = vocab.get('<EOS>')
+SOS_token = vocab.get('<SOS>')
+PAD_token = vocab.get('<PAD>')
+
+vocab_size = len(vocab)
+
 _s1 = time.time()
 
 if __name__ == '__main__':

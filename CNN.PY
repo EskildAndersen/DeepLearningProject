@@ -1,18 +1,9 @@
 import torch.nn as nn
 import torch
 import torchvision.models as models
-import torch.nn.functional as F
-import torch.optim as optim
-import numpy as np
-import pandas as pd
-import torchvision
-from torch.utils.data import Dataset, DataLoader
-import matplotlib.pyplot as plt
-from DataPreparator import ImageDataset, Images
-from json import dump
+from torch.utils.data import DataLoader
+from DataPreparator import Images
 from pickle import dump, load
-from vocabulary import max_len
-
 
 class CNNPreTrain(nn.Module):
     def __init__(self):
@@ -54,18 +45,16 @@ if __name__ == '__main__':
 
     # specify dim of image embedding
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    nEpocs = 1
     CNN = CNNPreTrain()
     CNN.to(device)
 
     Features = {}
-    for epoch in range(nEpocs):  # loop over the dataset multiple times
-        for i, data in enumerate(dataLoader):
-            image, img_path = data[0], data[1]
-            features = CNN(image.to(device))
-            Features[img_path[0]] = features.cpu().detach().numpy()
-            if i % 100 == 0:
-                print(i)
+    for i, data in enumerate(dataLoader):
+        image, img_path = data[0], data[1]
+        features = CNN(image.to(device))
+        Features[img_path[0]] = features.cpu().detach().numpy()
+        if i % 100 == 0:
+            print(i)
 
     dump(Features, open("features.p", "wb"))
 
