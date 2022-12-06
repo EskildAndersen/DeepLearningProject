@@ -109,6 +109,31 @@ def trainIters(encoder, decoder, optimizer, n_iters, print_every, plot_every, lr
 
     return plot_losses
 
+def evaluateLoop(   
+        encoder,
+        decoder,
+        data,):
+
+        for _,input_features, input_sentences in data:
+
+            encoder_output = encoder(input_features)
+            batch_size, encoder_output_size = encoder_output.shape
+            predictions = torch.zeros(batch_size, 0)
+            hidden, cell = decoder.getInitialHidden(batch_size, encoder_output_size)
+            SOS = input_sentences[:,:1]
+            for word_idx in range(1, max_len):
+                input_decoder = torch.cat((SOS,predictions),dim = -1)
+                outputs, (hidden, cell) = decoder(
+                    input_decoder,
+                    encoder_output,
+                    hidden,
+                    cell
+                )
+
+                predictions = outputs.argmax(-1) # batch_size x word_idx x vocab_size -> batch_size x word_idx
+
+            # sammenlign outputs og input_sentences
+
 
 def showPlot(points):
     plt.figure()
