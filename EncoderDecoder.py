@@ -154,7 +154,7 @@ class DecoderWithAttention(nn.Module):
         # output = self.soft_max(output)
         # prediction = prediction.argmax(2).squeeze(-1)
 
-        return output, (hidden, cell)
+        return output, (hidden, cell), (context_vector, attn_weights, allignment_scores)
 
     def getInitialHidden(self, batch_size, encoded_output_size):
         layers = self.number_layers

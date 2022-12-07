@@ -65,7 +65,7 @@ def train_batch(
                 prediction = getPredictions(outputs)
                 input_decoder = torch.cat((input_decoder, prediction), dim=-1)
 
-        outputs, (hidden, cell) = decoder(
+        outputs, (hidden, cell), _ = decoder(
             input_decoder,
             encoder_output,
             hidden,
@@ -96,7 +96,7 @@ def train_loop(
     lr,
     tf_prob,   # Probability of using target as input
     setting_filename,
-    print_every=1,
+    print_every=10,
 ):
     encoder_file = f'{setting_filename}_encoder.pt'
     decoder_file = f'{setting_filename}_decoder.pt'

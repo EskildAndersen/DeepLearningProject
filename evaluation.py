@@ -1,16 +1,14 @@
 import torch 
-from vocabulary import max_len, vocab_size
-from EncoderDecoder import FeatureEncoder, DecoderWithAttention
+from vocabulary import max_len
 from DataPreparator import ImageDataset
 from ignite.metrics.nlp import Bleu
 from CaptionCoder import deTokenizeCaptions
-from typing import Literal
 
 
 def evaluate(   
         encoder,
         decoder,
-        type:  Literal['test','train','dev'],
+        type: str,
     ):
         batch_size=32
         # select train, dev or test
@@ -45,7 +43,7 @@ def evaluate(
             # reccurent decoder part
             for _ in range(1, max_len):
                 input_decoder = torch.cat((SOS,predictions),dim = -1)
-                outputs, (hidden, cell) = decoder(
+                outputs, (hidden, cell), _ = decoder(
                     input_decoder,
                     encoder_output,
                     hidden,
