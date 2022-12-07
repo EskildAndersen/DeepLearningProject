@@ -69,8 +69,9 @@ class ImageDataset(Dataset):
 
         # Loading the features of the given image
         featureVector = self.features.get(self.img_labels.iloc[idx, 0])
+        img_path = self.img_labels.iloc[idx][0]
 
-        return label, torch.LongTensor(labelEncoded), torch.Tensor(featureVector)
+        return img_path,label, torch.LongTensor(labelEncoded), torch.Tensor(featureVector)
 
 
 class Images(torch.utils.data.Dataset):

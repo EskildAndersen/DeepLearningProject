@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 
+
 class FeatureEncoder(nn.Module):
     def __init__(
         self,
@@ -95,12 +96,20 @@ class DecoderWithAttention(nn.Module):
             num_layers=self.number_layers,
             bidirectional=self.bidirectional,
         )
+        self.lstm = nn.LSTMCell(
+            self.sentence_len,
+            self.lstm_hidden_size,
+            batch_first=True,
+            dropout=drop_prob,
+            num_layers=self.number_layers,
+            bidirectional=self.bidirectional,
+        )
 
         self.attention = self.get_score
-        self.att_softmax = nn.Softmax(dim=1)
+        self.att_softmax = nn.Softmax(dim=0)
 
         self.LinearMap1 = nn.Linear(
-            in_features=self.concat_size,
+            in_features=self.lstm_hidden_size,
             out_features=self.lstm_hidden_size,
         )
         self.LinearMap2 = nn.Linear(
@@ -121,33 +130,35 @@ class DecoderWithAttention(nn.Module):
         # Embedding
         embedded = self.embedding(sentences)
         embedded = self.dropout(embedded)
+        
+        
+        # Calculate allignment scores
+        allignment_scores = self.attention(
+            init_hidden, encoder_features.unsqueeze(1))
+
+        # Softmax allignment_scores to obtain attention weights
+        attn_weights = self.att_softmax(allignment_scores)
+        
+        # Calculating context vector
+        context_vector = torch.bmm(
+            attn_weights.unsqueeze(2).permute(1,0,2),
+            encoder_features.unsqueeze(1)
+        )
 
         # Generate new hidden state for decoder
-        lstm_out, (hidden, cell) = self.lstm(
+        (hidden, cell) = self.lstm(
             embedded,
             # Because hidden og cell needs (D * number of layers, batch_size, hidden_size)
             (init_hidden, init_cell)
         )
 
-        # Calculate allignment scores
-        allignment_scores = self.attention(
-            lstm_out, encoder_features.unsqueeze(1))
-
-        # Softmax allignment_scores to obtain attention weights
-        attn_weights = self.att_softmax(allignment_scores)
-
-        # Calculating context vector
-        context_vector = torch.bmm(
-            attn_weights.unsqueeze(2),
-            encoder_features.unsqueeze(1)
-        )
 
         # Calculate fines decoder output
-        output = torch.cat((lstm_out, context_vector), dim=-1)
+        output = hidden
 
         # Classify concatenated vector to vocab
-        output = self.LinearMap1(output)
-        output = self.relu(output)
+        #output = self.LinearMap1(output.squeeze(0))
+        #output = self.relu(output)
         output = self.LinearMap2(output)
 
         # Softmax output to get prediction probability
