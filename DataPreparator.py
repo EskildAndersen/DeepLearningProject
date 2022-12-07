@@ -20,12 +20,6 @@ import matplotlib.pyplot as plt
 from pickle import load
 from CaptionCoder import tokenizeCaptions
 
-'''
-Script to generate data class
-
-This script assusmes that path is structured as mentioend in readme.
-'''
-
 class ImageDataset(Dataset):
     def __init__(self, annotations_file):
         # Set paths
