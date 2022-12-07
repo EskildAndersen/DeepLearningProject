@@ -7,3 +7,4 @@ data/*
 pitch/ProjectPitch.mp4
 
 *.pt
+dl_venv/*
