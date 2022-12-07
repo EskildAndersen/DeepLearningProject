@@ -151,6 +151,7 @@ def train_loop(
                 print(f'{print_loss_avg} : {iter}[{i}]')
                 print(f'Prediction: {deTokenizeCaptions(prediction)}')
                 print(f'Target: {deTokenizeCaptions(sentences[0, 1:])}')
+                print()
 
         # Save model if average batch loss over an iteration has decreased
         isFirstIteration = iter == 0
@@ -161,8 +162,13 @@ def train_loop(
             torch.save(decoder, decoder_model_path)
 
             
-        train_accuracy.append(evaluate(encoder, decoder, 'train'))
-        validation_accuracy.append(evaluate(encoder, decoder, 'dev'))
+        train_acc = evaluate(encoder, decoder, 'train')
+        val_acc = evaluate(encoder, decoder, 'dev')
+        train_accuracy.append(train_acc)
+        validation_accuracy.append(val_acc)
+        
+        print(f'Train evaluation: {train_acc}')
+        print(f'Validation evaluation: {val_acc}\n')
 
     for iter in range(n_iters):
         try:
