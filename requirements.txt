@@ -103,3 +103,4 @@ wget==3.2
 widgetsnbextension==4.0.3
 yarg==0.1.9
 zipp==3.8.1
+pytorch-ignite==0.4.10
