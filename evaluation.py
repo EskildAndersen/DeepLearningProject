@@ -35,13 +35,15 @@ def evaluate(
 
             # feed through encoder
             encoder_output = encoder(input_features)
+
+            # initialize for decoder
             batch_size, encoder_output_size = encoder_output.shape
             predictions = torch.zeros(batch_size, 0,dtype=int).to(device)
             hidden, cell = decoder.getInitialHidden(batch_size, encoder_output_size)
             SOS = input_sentences[:,1,:1]
 
             # reccurent decoder part
-            for word_idx in range(1, max_len):
+            for _ in range(1, max_len):
                 input_decoder = torch.cat((SOS,predictions),dim = -1)
                 outputs, (hidden, cell) = decoder(
                     input_decoder,
@@ -51,7 +53,7 @@ def evaluate(
                 )
 
                 # calculate prediction to use as the next input
-                predictions = outputs.argmax(-1) # batch_size x word_idx x vocab_size -> batch_size x word_idx
+                predictions = outputs.argmax(-1)
            
             # prep final prediction and labels for Bleu calculations
             predictions = torch.cat((SOS,predictions),dim = -1)
@@ -90,7 +92,4 @@ if __name__ == '__main__':
     decoder = torch.load('decoder_model.pt',map_location=device)
     decoder.device = device # since only one gpu quick fix
 
-    print('here')
     bleu1,bleu2, bleu3, bleu4 = evaluate(encoder,decoder,'test')
-
-    pass
