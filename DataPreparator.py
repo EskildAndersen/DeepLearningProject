@@ -142,6 +142,8 @@ if __name__ == '__main__':
     # Define the paths for labels and imagss
     annotationsFile = 'labels.txt'
 
+   
+
     mean, std = (117.9994, 113.3671, 102.7541), (70.1257, 68.0825, 71.3111) 
 
     # get some images
