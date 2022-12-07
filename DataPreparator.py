@@ -21,8 +21,9 @@ from pickle import load
 from CaptionCoder import tokenizeCaptions
 
 class ImageDataset(Dataset):
-    def __init__(self, annotations_file):
+    def __init__(self, annotations_file,random = True):
         # Set paths
+        self.random = random
         self.img_dir = os.path.join('data', 'images')
         self.annotations_file = os.path.join('data', 'texts', annotations_file)
         self.feature_dir = os.path.join('data', 'features', 'features.p')
@@ -55,11 +56,17 @@ class ImageDataset(Dataset):
 
     def __getitem__(self, idx):
         # Draw a random number from 1 to 5
-        rand = np.random.randint(low=1, high=6)
-
-        # The number decides which caption we choose as label
-        label = self.img_labels.iloc[idx, rand]
-        labelEncoded = tokenizeCaptions(label)
+        if self.random:
+            # The number decides which caption we choose as label
+            rand = np.random.randint(low=1, high=6)
+            label = self.img_labels.iloc[idx, rand]
+            labelEncoded = tokenizeCaptions(label)
+            labelEncoded = labelEncoded
+        else: 
+            labels = self.img_labels.iloc[idx]
+            label = [label for label in labels[1:]]
+            labelEncoded = [tokenizeCaptions(l) for l in labels[1:]]
+            labelEncoded = labelEncoded
 
         # Loading the features of the given image
         featureVector = self.features.get(self.img_labels.iloc[idx, 0])
