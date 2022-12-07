@@ -11,7 +11,6 @@ import torch
 import torch.nn as nn
 import numpy as np
 import os
-import os
 import pandas as pd
 import torchvision.transforms as T
 from torchvision.io import read_image
