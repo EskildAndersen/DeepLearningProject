@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from vocabulary import max_len
 
+
 class FeatureEncoder(nn.Module):
     def __init__(
         self,

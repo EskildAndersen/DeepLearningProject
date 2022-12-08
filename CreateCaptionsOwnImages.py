@@ -30,24 +30,26 @@ class OwnImages(torch.utils.data.Dataset):
 
         image = read_image(img_path)
 
-        return image
+        return image, img_path
 
-# get some images
-dataset = OwnImages()
-data_loader = DataLoader(dataset, batch_size=1, shuffle=True)
-dataiter = iter(data_loader)
-images = dataiter.next()
+if __name__ == '__main__':
 
-for image in images:  # Run through all samples in a batch
-    plt.figure()
-    plt.imshow(np.transpose(image.numpy(), (1, 2, 0)))
-    #plt.title(label)
-    plt.axis('off')
-    plt.show()
+    # get some images
+    dataset = OwnImages()
+    data_loader = DataLoader(dataset, batch_size=1, shuffle=True)
+    dataiter = iter(data_loader)
+    images = dataiter.next()
+
+    for image in images:  # Run through all samples in a batch
+        plt.figure()
+        plt.imshow(np.transpose(image.numpy(), (1, 2, 0)))
+        #plt.title(label)
+        plt.axis('off')
+        plt.show()
 
 
-# initialize model
-model_path = ''
-model = torch.load(model_path)
-model.eval()
+    # initialize model
+    model_path = ''
+    model = torch.load(model_path)
+    model.eval()
 

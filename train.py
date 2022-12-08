@@ -1,3 +1,10 @@
+'''
+Script for training the auto-encoder model.
+
+Hyperparameters and settings are chosen in settings-file
+
+'''
+
 from settings import (
     # DECODER
     EMBEDDING_DIM,
@@ -10,6 +17,7 @@ from settings import (
     LEARNING_RATE,
     TEATHER_FORCING_PROB,
     OPTIMIZER,
+    WEIGHT_DECAY,
     LR_STEP,
     LOSS_PAD_INDEX,
     NUMBER_OF_ITERATIONS,
@@ -21,9 +29,7 @@ from vocabulary import max_len, vocab_size
 from CaptionCoder import deTokenizeCaptions
 from evaluation import evaluate
 from HelperFunctions import saveLoss, saveAccuracy
-
 import os
-import random
 import torch
 import torch.nn as nn
 from torch.optim.lr_scheduler import StepLR
@@ -77,8 +83,9 @@ def train_loop(
 
     best_avg_update_loss = 0
 
-    decoder_optimizer = optimizer(decoder.parameters(), lr=lr)
+    decoder_optimizer = optimizer(decoder.parameters(), lr=lr, weight_decay =  WEIGHT_DECAY)
     scheduler = StepLR(decoder_optimizer, step_size=LR_STEP, gamma=0.1)
+    
     criterion = nn.CrossEntropyLoss(ignore_index=LOSS_PAD_INDEX)
     
     def train_iter(iter):
@@ -92,7 +99,7 @@ def train_loop(
         print_loss_total = 0
         batch_loss_total = 0
         
-        for i, (_, sentences, features) in enumerate(trainloader):
+        for i, (_,_, sentences, features) in enumerate(trainloader):
         
             # Send batch to device
             sentences = sentences.to(DEVICE)
