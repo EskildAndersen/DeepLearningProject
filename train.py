@@ -10,9 +10,12 @@ from settings import (
     LEARNING_RATE,
     TEATHER_FORCING_PROB,
     OPTIMIZER,
+    WEIGHT_DECAY,
+    LR_STEP,
     LOSS_PAD_INDEX,
     NUMBER_OF_ITERATIONS,
     DEVICE,
+    
 )
 from DataPreparator import ImageDataset
 from EncoderDecoder import DecoderWithAttention
@@ -100,7 +103,8 @@ def train_loop(
 
     best_avg_update_loss = 0
 
-    decoder_optimizer = optimizer(decoder.parameters(), lr=lr)
+    decoder_optimizer = optimizer(decoder.parameters(), lr=lr,weight_decay =  WEIGHT_DECAY)
+    scheduler = StepLR(decoder_optimizer, step_size=LR_STEP, gamma=0.1)
     criterion = nn.CrossEntropyLoss(ignore_index=LOSS_PAD_INDEX)
     
     def train_iter(iter):

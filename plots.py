@@ -120,11 +120,11 @@ if __name__ == '__main__':
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    decoder = torch.load('settings_2_decoder.pt',map_location=device)
+    decoder = torch.load('settings_16_decoder.pt',map_location=device)
     decoder.device = device # since only one gpu quick fix
     decoder.eval()
 
-    train_dataset = ImageDataset(f'train_labels.txt')
+    train_dataset = ImageDataset(f'test_labels.txt')
     dataloader = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=1,
