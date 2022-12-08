@@ -13,12 +13,11 @@ def evaluate(
     ):  
         decoder.eval()
 
-        batch_size=BATCH_SIZE
         # select train, dev or test
         train_dataset = ImageDataset(f'{type}_labels.txt',False)
         dataloader = torch.utils.data.DataLoader(
             train_dataset,
-            batch_size=batch_size,
+            batch_size=BATCH_SIZE,
             shuffle=True
         )
 
@@ -33,6 +32,8 @@ def evaluate(
             # send to device
             input_features = input_features.to(DEVICE)
             input_sentences = input_sentences.to(DEVICE)
+            
+            batch_size = input_features.shape[0]
 
             # initialize for decoder
             prediction = torch.full((batch_size,), SOS_token).to(DEVICE)

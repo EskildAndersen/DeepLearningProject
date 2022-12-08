@@ -89,7 +89,7 @@ def train_loop(
     lr,
     tf_prob,   # Probability of using target as input
     setting_filename,
-    print_every=10,
+    print_every=60,
 ):
     decoder_file = f'{setting_filename}_decoder.pt'
     decoder_model_path = os.path.join('results', 'models', decoder_file)
@@ -98,8 +98,6 @@ def train_loop(
     train_accuracy = []
     validation_accuracy = []
 
-    print_loss_total = 0
-    batch_loss_total = 0
     best_avg_update_loss = 0
 
     decoder_optimizer = optimizer(decoder.parameters(), lr=lr)
@@ -109,9 +107,12 @@ def train_loop(
         nonlocal trainloader, decoder, optimizer, criterion, tf_prob
         nonlocal decoder_model_path, print_every
         nonlocal losses, train_accuracy, validation_accuracy
-        nonlocal print_loss_total, batch_loss_total, best_avg_update_loss
+        nonlocal best_avg_update_loss
         
         decoder.train()
+        
+        print_loss_total = 0
+        batch_loss_total = 0
         
         for i, (_, sentences, features) in enumerate(trainloader):
         
