@@ -6,10 +6,11 @@ import torchvision.models as models
 
 class CNNEncoder(nn.Module):
     def __init__(
-        self
+        self,
+        device,
     ):
         super(CNNEncoder, self).__init__()
-        vgg16 = models.vgg16(pretrained=True)
+        vgg16 = models.vgg16(pretrained=True).to(device)
         for param in vgg16.parameters():
             param.requires_grad_(False)
 

@@ -20,19 +20,18 @@ import numpy as np
 import os
 import pandas as pd
 import torchvision.transforms as T
-from torchvision.io import read_image
 from torch.utils.data import Dataset, DataLoader
-import matplotlib.pyplot as plt
-from pickle import load
-from CaptionCoder import tokenizeCaptions
+from pickle import load, dump
+from CaptionCoder import deTokenizeCaptions, tokenizeCaptions
+
 
 class ImageDataset(Dataset):
-    def __init__(self, annotations_file,random = True):
+    def __init__(self, annotations_file, feature_vector = 'features.p', random = True):
         # Set paths
         self.random = random
         self.img_dir = os.path.join('data', 'images')
         self.annotations_file = os.path.join('data', 'texts', annotations_file)
-        self.feature_dir = os.path.join('data', 'features', 'features.p')
+        self.feature_dir = os.path.join('data', 'features', feature_vector)
 
         # Load labels
         self.dct = dict()

@@ -22,7 +22,7 @@ def evaluate(
         decoder.eval()
 
         # select train, dev or test
-        train_dataset = ImageDataset(f'{type}_labels.txt',False)
+        train_dataset = ImageDataset(f'{type}_labels.txt', random=False)
         dataloader = torch.utils.data.DataLoader(
             train_dataset,
             batch_size=BATCH_SIZE,

@@ -11,14 +11,13 @@ from DataPreparator import Images
 from EncoderDecoder import CNNEncoder
 from pickle import dump, load
 
+def extractFeatures(annotationsFile, device):
 
-if __name__ == '__main__':
-    txtFilePath = 'labels.txt'
     mean, std = (0.485, 0.456, 0.406),(0.229, 0.224, 0.225)
-    dataset = Images(txtFilePath, mean, std, transform=False)
+    
+    dataset = Images(annotationsFile, mean, std, transform=True)
     dataLoader = DataLoader(dataset, batch_size=1, shuffle=False)
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     CNN = CNNEncoder()
     CNN.to(device)
 
@@ -36,3 +35,10 @@ if __name__ == '__main__':
 
     features = load(open("features.p", "rb"))
 
+if __name__ == '__main__':
+
+    txtFilePath = 'labels.txt'
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    extractFeatures(txtFilePath, device)
+ 
