@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from vocabulary import max_len
 
 class FeatureEncoder(nn.Module):
     def __init__(
@@ -122,24 +123,41 @@ class DecoderWithAttention(nn.Module):
         self,
         sentences,  # (batch_size)
         encoder_features, # (batch_size, number_of_layers=49, encoder_output_size=512)
-        prev_hidden,    # (batch_size, hidden_size)
-        prev_cell,  # (batch_size, hidden_size)
-    ):
+    ):  
+        global max_len
+
         # Embedding
         embedded = self.embedding(sentences)
         embedded = self.dropout(embedded)   # (batch_size, embedding_dim)
 
-        # Attention
-        alphas, attn_weights = self.attention(encoder_features, prev_hidden)
+        batch_size = sentences.shape[0]
+
+        hidden, cell = self.getInitialHidden(batch_size)
+
+
+        outputs = []
+        alphas = []
+
+        for s in range(max_len-1):
+
+            # Attention
+            alpha, attn_weight = self.attention(encoder_features, hidden)
         
-        lstm_input = torch.cat((embedded, attn_weights) , -1)
-        hidden, cell = self.lstm_cell(lstm_input, (prev_hidden, prev_cell))
+            lstm_input = torch.cat((embedded[:, s], attn_weight) , -1)
+
+            hidden, cell = self.lstm_cell(lstm_input, (hidden, cell))
+            
+            hidden = self.dropout(hidden)
+            
+            output = self.LinearMap(hidden)
+
+            outputs.append(output)
+            alphas.append(alpha)
         
-        hidden = self.dropout(hidden)
-        
-        output = self.LinearMap(hidden)
-        
-        return output, (hidden, cell), (alphas, attn_weights)
+        outputs = torch.stack(outputs, dim = 1)
+        alphas = torch.stack(alphas, dim = 1)
+
+        return outputs, alphas
 
 
     def getInitialHidden(self, batch_size):

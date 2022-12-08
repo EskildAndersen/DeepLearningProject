@@ -35,46 +35,22 @@ def train_batch(
     decoder,
     decoder_optimizer,
     criterion,
-    tf_prob,
 ):
     global max_len
 
     decoder_optimizer.zero_grad()
 
     loss = 0
-    batch_size = input_features.shape[0]
-    outputs = []
 
-    hidden, cell = decoder.getInitialHidden(batch_size)
-    tf_prob = 0
-    use_teacher_forcing = True if random.random() < tf_prob else False
-    output = None
-    for word_idx in range(max_len-1):
-        if use_teacher_forcing: # Use target as input
-            input_decoder = input_sentences[:, word_idx]
-            
-        else:   # Use prediction as input
-            input_decoder = input_sentences[:, 0]
-            if not (output == None):
-                prediction = getPredictions(output)
-                input_decoder = prediction
-        
-        output, (hidden, cell), _ = decoder(
-            input_decoder,
-            input_features,
-            hidden,
-            cell
-        )
-        outputs.append(output)
-    
-    outputs = torch.stack(outputs, 1)
+    outputs, _ = decoder(input_sentences, input_features)
+
     targets = input_sentences[:, 1:]
+
     loss = criterion(outputs.permute(0, 2, 1), targets)
 
     loss.backward()
     decoder_optimizer.step()
     
-
     return loss.item(), outputs[0]
 
 
@@ -88,8 +64,7 @@ def train_loop(
     decoder,
     optimizer,
     n_iters,
-    lr,
-    tf_prob,   # Probability of using target as input
+    lr,  # Probability of using target as input
     setting_filename,
     print_every=20,
 ):
@@ -107,7 +82,7 @@ def train_loop(
     criterion = nn.CrossEntropyLoss(ignore_index=LOSS_PAD_INDEX)
     
     def train_iter(iter):
-        nonlocal trainloader, decoder, optimizer, criterion, tf_prob
+        nonlocal trainloader, decoder, optimizer, criterion
         nonlocal decoder_model_path, print_every
         nonlocal losses, train_accuracy, validation_accuracy
         nonlocal best_avg_update_loss
@@ -129,7 +104,6 @@ def train_loop(
                     decoder,
                     decoder_optimizer,
                     criterion,
-                    tf_prob,
                 )
 
             losses.append((iter, i, loss))
@@ -190,7 +164,6 @@ def train_main(settings):
             optimizer=OPTIMIZER,
             n_iters=NUMBER_OF_ITERATIONS,
             lr=LEARNING_RATE,
-            tf_prob=TEATHER_FORCING_PROB,
             setting_filename=settings,
         )
     except SaveFiles as sf:
