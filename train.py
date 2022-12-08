@@ -1,13 +1,8 @@
 from settings import (
-    # ENCODER
-    ENCODER_OUTPUT_SIZE,
-    ENCODER_HIDDEN_1_SIZE,
-    ENCODER_HIDDEN_2_SIZE,
-    ENCODER_DROP_PROB,
     # DECODER
-    DECODER_LSTM_HIDDEN_SIZE,
-    NUMBER_OF_LSTM_LAYERS,
-    BIDERECTIONAL_LSTM,
+    EMBEDDING_DIM,
+    ATTENTION_DIM,
+    DECODER_DIM,
     DECODER_DROP_PROB,
     DECODER_PAD_INDEX,
     # GENERAL
@@ -15,11 +10,12 @@ from settings import (
     LEARNING_RATE,
     TEATHER_FORCING_PROB,
     OPTIMIZER,
+    LOSS_PAD_INDEX,
     NUMBER_OF_ITERATIONS,
     DEVICE,
 )
 from DataPreparator import ImageDataset
-from EncoderDecoder import FeatureEncoder, DecoderWithAttention
+from EncoderDecoder import DecoderWithAttention
 from vocabulary import max_len, vocab_size
 from CaptionCoder import deTokenizeCaptions
 from evaluation import evaluate
@@ -34,9 +30,7 @@ import torch.nn as nn
 def train_batch(
     input_features,     # (batch_size, feature_len)
     input_sentences,    # (batch_size, sentence_len)
-    encoder,
     decoder,
-    encoder_optimizer,
     decoder_optimizer,
     criterion,
     tf_prob,
@@ -44,40 +38,40 @@ def train_batch(
     global max_len
 
     decoder_optimizer.zero_grad()
-    encoder_optimizer.zero_grad()
 
     loss = 0
+    batch_size = input_features.shape[0]
+    outputs = []
 
-    encoder_output = encoder(input_features)
-    batch_size, encoder_output_size = encoder_output.shape
-
-    hidden, cell = decoder.getInitialHidden(batch_size, encoder_output_size)
-
+    hidden, cell = decoder.getInitialHidden(batch_size)
+    tf_prob = 0
     use_teacher_forcing = True if random.random() < tf_prob else False
-    outputs = None
-    for word_idx in range(1, max_len):
+    output = None
+    for word_idx in range(max_len-1):
         if use_teacher_forcing: # Use target as input
-            input_decoder = input_sentences[:, 0:word_idx]
+            input_decoder = input_sentences[:, word_idx]
             
         else:   # Use prediction as input
-            input_decoder = input_sentences[:, 0:1]
-            if not (outputs == None):
-                prediction = getPredictions(outputs)
-                input_decoder = torch.cat((input_decoder, prediction), dim=-1)
-
-        outputs, (hidden, cell), _ = decoder(
+            input_decoder = input_sentences[:, 0]
+            if not (output == None):
+                prediction = getPredictions(output)
+                input_decoder = prediction
+        
+        output, (hidden, cell), _ = decoder(
             input_decoder,
-            encoder_output,
+            input_features,
             hidden,
             cell
         )
-
-        target = input_sentences[:, 1:word_idx + 1]
-        loss += criterion(outputs.permute(0, 2, 1), target)
+        outputs.append(output)
+    
+    outputs = torch.stack(outputs, 1)
+    targets = input_sentences[:, 1:]
+    loss = criterion(outputs.permute(0, 2, 1), targets)
 
     loss.backward()
-    encoder_optimizer.step()
     decoder_optimizer.step()
+    
 
     return loss.item(), outputs[0]
 
@@ -89,7 +83,6 @@ def getPredictions(outputs):
 
 def train_loop(
     trainloader,
-    encoder,
     decoder,
     optimizer,
     n_iters,
@@ -98,9 +91,7 @@ def train_loop(
     setting_filename,
     print_every=10,
 ):
-    encoder_file = f'{setting_filename}_encoder.pt'
     decoder_file = f'{setting_filename}_decoder.pt'
-    encoder_model_path = os.path.join('results', 'models', encoder_file)
     decoder_model_path = os.path.join('results', 'models', decoder_file)
 
     losses = []
@@ -111,20 +102,19 @@ def train_loop(
     batch_loss_total = 0
     best_avg_update_loss = 0
 
-    encoder.train()
-    decoder.train()
-
-    encoder_optimizer = optimizer(encoder.parameters(), lr=lr)
     decoder_optimizer = optimizer(decoder.parameters(), lr=lr)
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(ignore_index=LOSS_PAD_INDEX)
     
     def train_iter(iter):
-        nonlocal trainloader, encoder, decoder, optimizer, criterion, tf_prob
-        nonlocal encoder_model_path, decoder_model_path, print_every
+        nonlocal trainloader, decoder, optimizer, criterion, tf_prob
+        nonlocal decoder_model_path, print_every
         nonlocal losses, train_accuracy, validation_accuracy
         nonlocal print_loss_total, batch_loss_total, best_avg_update_loss
         
-        for i, (_, sentences, features) in enumerate(trainloader):                
+        decoder.train()
+        
+        for i, (_, sentences, features) in enumerate(trainloader):
+        
             # Send batch to device
             sentences = sentences.to(DEVICE)
             features = features.to(DEVICE)
@@ -132,9 +122,7 @@ def train_loop(
             loss, output = train_batch(
                     features,
                     sentences,
-                    encoder,
                     decoder,
-                    encoder_optimizer,
                     decoder_optimizer,
                     criterion,
                     tf_prob,
@@ -158,12 +146,12 @@ def train_loop(
         avg_update_loss = batch_loss_total / i
         isBetterLoss = best_avg_update_loss > avg_update_loss
         if isFirstIteration or isBetterLoss:
-            torch.save(encoder, encoder_model_path)
+            best_avg_update_loss = avg_update_loss
             torch.save(decoder, decoder_model_path)
 
-            
-        train_acc = evaluate(encoder, decoder, 'train')
-        val_acc = evaluate(encoder, decoder, 'dev')
+        
+        train_acc = evaluate(decoder, 'train')
+        val_acc = evaluate(decoder, 'dev')
         train_accuracy.append(train_acc)
         validation_accuracy.append(val_acc)
         
@@ -186,16 +174,12 @@ class SaveFiles(Exception):
 def train_main(settings):
     # Initialize
     trainloader = initializeDataLoader(type='train')
-    encoder = initializeEncoder()
     decoder = initializeDecoder()
-
-    # Save settings
     
     # Run training loop
     try:
         losses, train_acc, val_acc = train_loop(
             trainloader=trainloader,
-            encoder=encoder,
             decoder=decoder,
             optimizer=OPTIMIZER,
             n_iters=NUMBER_OF_ITERATIONS,
@@ -215,28 +199,14 @@ def train_main(settings):
 
 def initializeDecoder():
     model = DecoderWithAttention(
-        vocab_len=vocab_size,
-        sentence_len=max_len,
-        lstm_hidden_len=DECODER_LSTM_HIDDEN_SIZE,
+        vocab_size=vocab_size,
+        embedding_dim=EMBEDDING_DIM,
+        attention_dim=ATTENTION_DIM,
+        encoder_dim=512,
+        decoder_dim=DECODER_DIM,
         device=DEVICE,
-        number_layers=NUMBER_OF_LSTM_LAYERS,
-        bidirectional=BIDERECTIONAL_LSTM,
         drop_prob=DECODER_DROP_PROB,
         pad_token=DECODER_PAD_INDEX,
-    ).to(DEVICE)
-
-    return model
-
-
-def initializeEncoder():
-    feature_size = 25088
-    model = FeatureEncoder(
-        feature_len=feature_size,
-        output_len=ENCODER_OUTPUT_SIZE,
-        hidden_layer1_len=ENCODER_HIDDEN_1_SIZE,
-        hidden_layer2_len=ENCODER_HIDDEN_2_SIZE,
-        device=DEVICE,
-        drop_prob=ENCODER_DROP_PROB,
     ).to(DEVICE)
 
     return model
