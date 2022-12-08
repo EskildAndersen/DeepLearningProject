@@ -4,7 +4,7 @@ import numpy as np
 from settings import DEVICE, PAD_token
 import torch
 from DataPreparator import ImageDataset
-from vocabulary import max_len
+from vocabulary import max_len, SOS_token
 from CaptionCoder import deTokenizeCaptions
 import os
 from torchvision.io import read_image
@@ -41,47 +41,43 @@ def plotlossNaccuracy(
 
 
 def getContextVector(   
-        encoder,
         decoder,
-        input_sentence,
+        input_sentences,
         input_features,
-        device
     ): 
-        # send to device
-        input_features = input_features.to(device)
-        input_sentence = input_sentence.to(device)
+        input_features = input_features.to(DEVICE)
+        input_sentences = input_sentences.to(DEVICE)
+        
+        batch_size = input_features.shape[0]
 
-        # feed through encoder
-        encoder_output = encoder(input_features)
-        contextList = []
         # initialize for decoder
-        batch_size, encoder_output_size = encoder_output.shape
-        predictions = torch.zeros(batch_size, 0,dtype=int).to(device)
-        hidden, cell = decoder.getInitialHidden(batch_size, encoder_output_size)
-        SOS = input_sentence[:,:1]
-
+        prediction = torch.full((batch_size,), SOS_token).to(DEVICE)
+        predictions = []
+        hidden, cell = decoder.getInitialHidden(batch_size)
+        contextList = []
         # reccurent decoder part
         for _ in range(1, max_len):
-            input_decoder = torch.cat((SOS,predictions),dim = -1)
-            outputs, (hidden, cell), (context,attnweight,alignment) = decoder(
+            input_decoder = prediction
+            output, (hidden, cell), (alpha,attnWeights) = decoder(
                 input_decoder,
-                encoder_output,
+                input_features,
                 hidden,
                 cell
             )
 
-            contextList.append(context[0,-1,:])
             # calculate prediction to use as the next input
-            predictions = outputs.argmax(-1)
-        contextList = torch.stack(contextList)
+            prediction = output.argmax(-1)
+            predictions.append(prediction)
+            contextList.append(alpha)
         # prep final prediction and labels for Bleu calculations
-        predictions = torch.cat((SOS,predictions),dim = -1)
+        predictions = torch.stack(predictions, 1)
+        contextList = torch.stack(contextList)
         return contextList, predictions
 
 def plotAttention(img_path,contextVector,prediction):
     listOfWords = prediction.split()
     image = read_image(os.path.join('data','images',img_path[0]))
-    _,dim = contextVector.shape
+    dim = contextVector.shape[-1]
     dim = int(np.sqrt(dim))
     axisLen = int(np.ceil(np.sqrt(len(listOfWords))))
     fig,ax = plt.subplots(nrows=axisLen,ncols=axisLen)
@@ -124,11 +120,7 @@ if __name__ == '__main__':
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    encoder = torch.load('encoder_model.pt',map_location=device)
-    encoder.device = device # since only one gpu quick fix
-    encoder.eval()
-
-    decoder = torch.load('decoder_model.pt',map_location=device)
+    decoder = torch.load('settings_2_decoder.pt',map_location=device)
     decoder.device = device # since only one gpu quick fix
     decoder.eval()
 
@@ -144,7 +136,7 @@ if __name__ == '__main__':
     img_path, labels,input_sentence, input_feature = dataIter.next()
 
 
-    contextVector, prediction = getContextVector(encoder,decoder,input_sentence,input_feature,device)
+    contextVector, prediction = getContextVector(decoder,input_sentence,input_feature)
 
     prediction = deTokenizeCaptions(prediction[0],True)
 
