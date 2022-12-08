@@ -38,28 +38,19 @@ def evaluate(
             # initialize for decoder
             prediction = torch.full((batch_size,), SOS_token).to(DEVICE)
             predictions = []
-            hidden, cell = decoder.getInitialHidden(batch_size)
 
-            # reccurent decoder part
-            for _ in range(1, max_len):
-                input_decoder = prediction
-                output, (hidden, cell), _ = decoder(
-                    input_decoder,
-                    input_features,
-                    hidden,
-                    cell
-                )
+            output, _ = decoder(input_sentences[:,0,:], input_features)
 
                 # calculate prediction to use as the next input
-                prediction = output.argmax(-1)
-                predictions.append(prediction)
+            prediction = output.argmax(-1)
+            predictions.append(prediction)
                 
             # prep final prediction and labels for Bleu calculations
             predictions = torch.stack(predictions, 1)
             label = zip(*labels)
 
             # split sentences to list of words
-            predictionssplit = [deTokenizeCaptions(prediction,asString=True).split() for prediction in predictions]
+            predictionssplit = [deTokenizeCaptions(prediction,asString=True).split() for prediction in predictions.squeeze(1)]
             labelsplit = [[l.split() for l in ls] for ls in label]
 
             # update Bleu scores
