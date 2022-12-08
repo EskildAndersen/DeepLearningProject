@@ -1,14 +1,21 @@
 '''
+Script to generate images and image path with corresponding labels. 
 
-Script to generate data class
+class 'ImageDataset' loads the labels.txt file and split the 
+image path from the 5 corresponding labels. If random is set to True
+a randomly chosen caption to the image will be chosen. 
+The class also loads the feature vector from all the images 
+that has been fed through VGG16 in CNN.py. Returns image path,
+label (caption), label encoded, and feature vector. 
 
-This script assusmes that path is structured as mentioend in readme.
+class 'Images' does almost the same kind of process, but returns an image,
+image path and corresponding labels. If transform = True, the images
+are normalized and reshaped into a fixed size. 
 
 '''
 from torch.utils.data import Dataset
 import re
 import torch
-import torch.nn as nn
 import numpy as np
 import os
 import pandas as pd
@@ -108,14 +115,11 @@ class Images(torch.utils.data.Dataset):
         img_path = os.path.join(self.img_dir, name)
 
         if self.transform:
-            preprocess = T.Compose([
-                                            
-                T.transforms.Resize(224),        # Resize image
+            preprocess = T.Compose([                          
+                T.transforms.Resize(224),                           # Resize image
                 T.transforms.Normalize(
                     (0.485, 0.456, 0.406),(0.229, 0.224, 0.225))])
-                    #mean = self.mean,                   # Normalize data
-                    #std = self.std)])
-
+                                                                    # Normalize data
             image = read_image(img_path).float()
             image = preprocess(image)
         else:
@@ -129,10 +133,7 @@ class Images(torch.utils.data.Dataset):
 
         return image, name, label
 
-# Calculate mean and std of all pictures (takes alot of time!!)
-calculateMeanAndStd = False
-
-if calculateMeanAndStd:
+def calcMeanAndStd():
     image_data = Images('labels.txt')
     image_data_loader = DataLoader(
         image_data,
@@ -145,12 +146,21 @@ if calculateMeanAndStd:
     # shape of images = [b,c,w,h]
     mean, std = images.mean([0, 2, 3]), images.std([0, 2, 3])
 
+    return mean, std
+
 if __name__ == '__main__':
+
+    
+    # Calculate mean and std of all pictures (takes alot of time!!)
+    calculateMeanAndStd = False
+
+    if calculateMeanAndStd:
+        calculateMeanAndStd()
 
     # Define the paths for labels and imagss
     annotationsFile = 'labels.txt'
 
-    mean, std = (117.9994, 113.3671, 102.7541), (70.1257, 68.0825, 71.3111) 
+    mean, std = (0.485, 0.456, 0.406),(0.229, 0.224, 0.225)
 
     # get some images
     dataset = Images(annotationsFile, mean, std)

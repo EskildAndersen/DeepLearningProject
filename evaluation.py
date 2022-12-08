@@ -1,11 +1,19 @@
-from settings import DEVICE, BATCH_SIZE
+'''
+Script to evaluate model (validation and testing).
+Performance is evaluated through the metric BLEU. "https://en.wikipedia.org/wiki/BLEU"
 
+'''
+
+
+
+
+
+from settings import DEVICE, BATCH_SIZE
 import torch 
-from vocabulary import max_len, SOS_token
+from vocabulary import SOS_token
 from DataPreparator import ImageDataset
 from ignite.metrics.nlp import Bleu
 from CaptionCoder import deTokenizeCaptions
-
 
 def evaluate(   
         decoder,
@@ -27,7 +35,7 @@ def evaluate(
         Bleu3 = Bleu(ngram = 3)
         Bleu4 = Bleu(ngram = 4)
 
-        for labels,input_sentences, input_features in dataloader:
+        for _, labels,input_sentences, input_features in dataloader:
             
             # send to device
             input_features = input_features.to(DEVICE)
@@ -69,16 +77,10 @@ def evaluate(
 
 
 
-
-
-
-
 if __name__ == '__main__':
 
     batch_size = 32
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-
 
     encoder = torch.load('encoder_model.pt',map_location=device)
     encoder.device = device # since only one gpu quick fix

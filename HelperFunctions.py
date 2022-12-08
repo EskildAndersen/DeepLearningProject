@@ -1,3 +1,9 @@
+'''
+Script with helper functions to save chosen settings, save accuracy and loss of models.
+Beneficial when training and validating models to finetune parameters. 
+
+'''
+
 from settings import (
     # DECODER
     EMBEDDING_DIM,
@@ -5,15 +11,16 @@ from settings import (
     DECODER_DIM,
     DECODER_DROP_PROB,
     DECODER_PAD_INDEX,
+
     # GENERAL
     BATCH_SIZE,
     LEARNING_RATE,
     TEATHER_FORCING_PROB,
+    WEIGHT_DECAY,
     OPTIMIZER,
     LR_STEP,
     LOSS_PAD_INDEX,
     NUMBER_OF_ITERATIONS,
-    DEVICE,
 )
 import os
 
@@ -40,6 +47,7 @@ def saveSettings():
         f.write(f'BATCH_SIZE : {BATCH_SIZE}\n')
         f.write(f'LEARNING_RATE : {LEARNING_RATE}\n')
         f.write(f'OPTIMIZER : {str(OPTIMIZER).split(".")[-2]}\n')
+        f.write(f'WEIGHT_DECAY : {WEIGHT_DECAY}\n')
         f.write(f'LR_STEP : {LR_STEP}\n')
         f.write(f'LOSS_PAD_INDEX : {LOSS_PAD_INDEX}\n')
         f.write(f'NUMBER_OF_ITERATIONS : {NUMBER_OF_ITERATIONS}\n')

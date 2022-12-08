@@ -1,5 +1,13 @@
-# script der skal start token,end token og pad sætningen til en maks længde
-# input er En sætning, et vocab og en maks længde1
+
+'''
+
+Script to tokenize and detokenize captions. All captions used in model
+must begin with '<SOS>' and end with '<EOS>'. If a sentence is shorter
+than the largest sentence in the dataset overall, then padding
+are applied after '<EOS>' to make all sentences equal length that is the 
+maximum length of the sentence in the dataset. 
+
+'''
 
 from vocabulary import inv_vocab, vocab, max_len, \
     SOS_token, EOS_token, PAD_token

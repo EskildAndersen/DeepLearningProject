@@ -1,3 +1,11 @@
+'''
+Script to seperate labels.txt file into train, dev, and testing files using the
+Flickr-8k_'...' txt files only containing image paths. 
+
+The seperated files will now be split into train, dev and testing and contain
+both image path and corresponding captions, like labels.txt.
+'''
+
 import os
 import re
 
