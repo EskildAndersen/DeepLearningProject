@@ -1,3 +1,13 @@
+'''
+Script to augment the captions. 
+
+All words are lower case, apostrof ' are etc.
+
+Captions are output in the labels.txt file in data/texts/
+
+'''
+
+
 import os
 import re
 

@@ -1,3 +1,10 @@
+'''
+Script to load all the captions (labels). 
+
+The script will find the maximum length of all captions and create a vocabolary and inverse vocabolary.
+
+
+'''
 import os
 import time
 

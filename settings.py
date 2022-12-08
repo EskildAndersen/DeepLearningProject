@@ -1,3 +1,8 @@
+'''
+Script to initialize hyperparameters and settings to be used in training. 
+
+'''
+
 import torch.optim as optim
 import torch
 from vocabulary import PAD_token
@@ -16,7 +21,7 @@ LEARNING_RATE = 0.005
 OPTIMIZER = optim.Adam
 LR_STEP = 200
 NUMBER_OF_ITERATIONS = 300
-TEATHER_FORCING_PROB = 0.7
+TEATHER_FORCING_PROB = 1
 LOSS_PAD_INDEX = PAD_token
 
 ## DEVICE
