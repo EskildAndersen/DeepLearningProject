@@ -10,6 +10,7 @@ from settings import (
     LEARNING_RATE,
     TEATHER_FORCING_PROB,
     OPTIMIZER,
+    LR_STEP,
     LOSS_PAD_INDEX,
     NUMBER_OF_ITERATIONS,
     DEVICE,
@@ -39,6 +40,7 @@ def saveSettings():
         f.write(f'BATCH_SIZE : {BATCH_SIZE}\n')
         f.write(f'LEARNING_RATE : {LEARNING_RATE}\n')
         f.write(f'OPTIMIZER : {str(OPTIMIZER).split(".")[-2]}\n')
+        f.write(f'LR_STEP : {LR_STEP}\n')
         f.write(f'LOSS_PAD_INDEX : {LOSS_PAD_INDEX}\n')
         f.write(f'NUMBER_OF_ITERATIONS : {NUMBER_OF_ITERATIONS}\n')
         f.write(f'TEATHER_FORCING_PROB : {TEATHER_FORCING_PROB}\n')

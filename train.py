@@ -10,6 +10,7 @@ from settings import (
     LEARNING_RATE,
     TEATHER_FORCING_PROB,
     OPTIMIZER,
+    LR_STEP,
     LOSS_PAD_INDEX,
     NUMBER_OF_ITERATIONS,
     DEVICE,
@@ -25,6 +26,7 @@ import os
 import random
 import torch
 import torch.nn as nn
+from torch.optim.lr_scheduler import StepLR
 
 
 def train_batch(
@@ -89,7 +91,7 @@ def train_loop(
     lr,
     tf_prob,   # Probability of using target as input
     setting_filename,
-    print_every=60,
+    print_every=20,
 ):
     decoder_file = f'{setting_filename}_decoder.pt'
     decoder_model_path = os.path.join('results', 'models', decoder_file)
@@ -101,6 +103,7 @@ def train_loop(
     best_avg_update_loss = 0
 
     decoder_optimizer = optimizer(decoder.parameters(), lr=lr)
+    scheduler = StepLR(decoder_optimizer, step_size=LR_STEP, gamma=0.1)
     criterion = nn.CrossEntropyLoss(ignore_index=LOSS_PAD_INDEX)
     
     def train_iter(iter):
@@ -158,6 +161,8 @@ def train_loop(
         
         print(f'Train evaluation: {train_acc}')
         print(f'Validation evaluation: {val_acc}\n')
+        
+        scheduler.step()
 
     for iter in range(n_iters):
         try:
