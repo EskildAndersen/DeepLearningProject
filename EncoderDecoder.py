@@ -37,7 +37,7 @@ class FeatureEncoder(nn.Module):
 
     def forward(
         self,
-        features,   # (batch_size, feature_len)
+        features,   # (batch_size, number_layers, feature_len)
     ):
 
         denseFeature = self.Linear1(features.squeeze(1))
@@ -50,143 +50,103 @@ class FeatureEncoder(nn.Module):
 
         denseFeature = self.Linear3(denseFeature)
         denseFeature = self.dropout(denseFeature)
-        output = self.relu(denseFeature)  # (batch_size, output_size)
+        output = self.relu(denseFeature)  # (batch_size ,output_size)
 
-        return output
+        return output.unsqueeze(1) # (batch_size, number_layers, output_size)
+
+
+
+class Attention(nn.Module):
+    def __init__(
+        self, decoder_out_dim, attention_dim, encoder_dim=512
+    ):
+        super(Attention, self).__init__()
+        
+        self.attention_dim = attention_dim
+        
+        self.hidden_map = nn.Linear(decoder_out_dim, attention_dim)
+        self.feature_map = nn.Linear(encoder_dim, attention_dim)
+        
+        self.attention_map = nn.Linear(attention_dim, 1)
+        self.softmax = nn.Softmax(dim = 1)
+
+    def forward(
+        self, 
+        features,
+        hidden,
+    ):
+        mapped_features = self.feature_map(features)
+        mapped_hidden = self.hidden_map(hidden)
+        
+        combined_states = torch.tanh(mapped_features + mapped_hidden.unsqueeze(1))
+        attn_scores = self.attention_map(combined_states).squeeze(2)
+        
+        alphas = self.softmax(attn_scores)
+        
+        attn_weights = features * alphas.unsqueeze(2)
+        attn_weights = attn_weights.sum(dim=1)
+        
+        return alphas, attn_weights
 
 
 class DecoderWithAttention(nn.Module):
     def __init__(
         self,
-        vocab_len,
-        sentence_len,
-        lstm_hidden_len,
+        vocab_size,
+        embedding_dim,
+        attention_dim,
+        encoder_dim,
+        decoder_dim,
         device,
-        number_layers=5,
-        bidirectional=False,
         drop_prob=0.1,
         pad_token=None,
     ):
         super(DecoderWithAttention, self).__init__()
         self.device = device
 
-        self.vocab_size = vocab_len
-        self.lstm_hidden_size = lstm_hidden_len
-        self.sentence_len = sentence_len
-        self.concat_size = self.lstm_hidden_size*2
-        self.pad_token = pad_token
-
-        self.number_layers = number_layers
-        self.bidirectional = bidirectional
-
-        self.dropout = nn.Dropout(drop_prob)
-        self.relu = nn.ReLU()
-
+        self.decoder_dim = decoder_dim
+        
         self.embedding = nn.Embedding(
-            self.vocab_size,
-            self.sentence_len,
-            padding_idx=self.pad_token,
+            vocab_size,
+            embedding_dim,
+            padding_idx=pad_token,
         )
-
-        self.lstm = nn.LSTM(
-            self.sentence_len,
-            self.lstm_hidden_size,
-            batch_first=True,
-            dropout=drop_prob,
-            num_layers=self.number_layers,
-            bidirectional=self.bidirectional,
+        self.dropout = nn.Dropout(drop_prob)
+        self.attention = Attention(decoder_dim, attention_dim).to(device)
+        self.lstm_cell = nn.LSTMCell(embedding_dim + encoder_dim, decoder_dim)
+        self.LinearMap = nn.Linear(
+            in_features=decoder_dim,
+            out_features=vocab_size,
         )
-        self.lstm = nn.LSTMCell(
-            self.sentence_len,
-            self.lstm_hidden_size,
-            batch_first=True,
-            dropout=drop_prob,
-            num_layers=self.number_layers,
-            bidirectional=self.bidirectional,
-        )
-
-        self.attention = self.get_score
-        self.att_softmax = nn.Softmax(dim=0)
-
-        self.LinearMap1 = nn.Linear(
-            in_features=self.lstm_hidden_size,
-            out_features=self.lstm_hidden_size,
-        )
-        self.LinearMap2 = nn.Linear(
-            in_features=self.lstm_hidden_size,
-            out_features=self.vocab_size,
-        )
-
-        self.soft_max = nn.LogSoftmax(dim=2)
 
     def forward(
         self,
-        sentences,  # (batch_size, sentence_len)
-        # encoder_outputs (batch_size, encoder_output_size)
-        encoder_features,
-        init_hidden,
-        init_cell,
+        sentences,  # (batch_size)
+        encoder_features, # (batch_size, number_of_layers=49, encoder_output_size=512)
+        prev_hidden,    # (batch_size, hidden_size)
+        prev_cell,  # (batch_size, hidden_size)
     ):
         # Embedding
         embedded = self.embedding(sentences)
-        embedded = self.dropout(embedded)
+        embedded = self.dropout(embedded)   # (batch_size, embedding_dim)
+
+        # Attention
+        alphas, attn_weights = self.attention(encoder_features, prev_hidden)
         
+        lstm_input = torch.cat((embedded, attn_weights) , -1)
+        hidden, cell = self.lstm_cell(lstm_input, (prev_hidden, prev_cell))
         
-        # Calculate allignment scores
-        allignment_scores = self.attention(
-            init_hidden, encoder_features.unsqueeze(1))
-
-        # Softmax allignment_scores to obtain attention weights
-        attn_weights = self.att_softmax(allignment_scores)
+        hidden = self.dropout(hidden)
         
-        # Calculating context vector
-        context_vector = torch.bmm(
-            attn_weights.unsqueeze(2).permute(1,0,2),
-            encoder_features.unsqueeze(1)
-        )
-
-        # Generate new hidden state for decoder
-        (hidden, cell) = self.lstm(
-            embedded,
-            # Because hidden og cell needs (D * number of layers, batch_size, hidden_size)
-            (init_hidden, init_cell)
-        )
+        output = self.LinearMap(hidden)
+        
+        return output, (hidden, cell), (alphas, attn_weights)
 
 
-        # Calculate fines decoder output
-        output = hidden
-
-        # Classify concatenated vector to vocab
-        #output = self.LinearMap1(output.squeeze(0))
-        #output = self.relu(output)
-        output = self.LinearMap2(output)
-
-        # Softmax output to get prediction probability
-        # output = self.soft_max(output)
-        # prediction = prediction.argmax(2).squeeze(-1)
-
-        return output, (hidden, cell), (context_vector, attn_weights, allignment_scores)
-
-    def getInitialHidden(self, batch_size, encoded_output_size):
-        layers = self.number_layers
-        size_0 = layers if not self.bidirectional else layers * 2
-        hidden = torch.zeros(
-            (
-                size_0,
-                batch_size,
-                encoded_output_size
-            )
-        ).to(self.device)
-
-        cell = torch.zeros(
-            (
-                self.number_layers,
-                batch_size,
-                encoded_output_size
-            )
-        ).to(self.device)
+    def getInitialHidden(self, batch_size):
+        hidden = torch.zeros((batch_size, self.decoder_dim)).to(self.device)
+        cell = torch.zeros((batch_size, self.decoder_dim)).to(self.device)
 
         return hidden, cell
 
-    def get_score(self, hidden, features):
-        return torch.sum(hidden * features, dim=2)
+

@@ -1,21 +1,23 @@
+from settings import DEVICE, BATCH_SIZE
+
 import torch 
-from vocabulary import max_len
+from vocabulary import max_len, SOS_token
 from DataPreparator import ImageDataset
 from ignite.metrics.nlp import Bleu
 from CaptionCoder import deTokenizeCaptions
 
 
 def evaluate(   
-        encoder,
         decoder,
         type: str,
-    ):
-        batch_size=32
+    ):  
+        decoder.eval()
+
         # select train, dev or test
         train_dataset = ImageDataset(f'{type}_labels.txt',False)
         dataloader = torch.utils.data.DataLoader(
             train_dataset,
-            batch_size=batch_size,
+            batch_size=BATCH_SIZE,
             shuffle=True
         )
 
@@ -28,33 +30,32 @@ def evaluate(
         for labels,input_sentences, input_features in dataloader:
             
             # send to device
-            input_features = input_features.to(device)
-            input_sentences = input_sentences.to(device)
-
-            # feed through encoder
-            encoder_output = encoder(input_features)
+            input_features = input_features.to(DEVICE)
+            input_sentences = input_sentences.to(DEVICE)
+            
+            batch_size = input_features.shape[0]
 
             # initialize for decoder
-            batch_size, encoder_output_size = encoder_output.shape
-            predictions = torch.zeros(batch_size, 0,dtype=int).to(device)
-            hidden, cell = decoder.getInitialHidden(batch_size, encoder_output_size)
-            SOS = input_sentences[:,1,:1]
+            prediction = torch.full((batch_size,), SOS_token).to(DEVICE)
+            predictions = []
+            hidden, cell = decoder.getInitialHidden(batch_size)
 
             # reccurent decoder part
             for _ in range(1, max_len):
-                input_decoder = torch.cat((SOS,predictions),dim = -1)
-                outputs, (hidden, cell), _ = decoder(
+                input_decoder = prediction
+                output, (hidden, cell), _ = decoder(
                     input_decoder,
-                    encoder_output,
+                    input_features,
                     hidden,
                     cell
                 )
 
                 # calculate prediction to use as the next input
-                predictions = outputs.argmax(-1)
-           
+                prediction = output.argmax(-1)
+                predictions.append(prediction)
+                
             # prep final prediction and labels for Bleu calculations
-            predictions = torch.cat((SOS,predictions),dim = -1)
+            predictions = torch.stack(predictions, 1)
             label = zip(*labels)
 
             # split sentences to list of words

@@ -1,13 +1,8 @@
 from settings import (
-    # ENCODER
-    ENCODER_OUTPUT_SIZE,
-    ENCODER_HIDDEN_1_SIZE,
-    ENCODER_HIDDEN_2_SIZE,
-    ENCODER_DROP_PROB,
     # DECODER
-    DECODER_LSTM_HIDDEN_SIZE,
-    NUMBER_OF_LSTM_LAYERS,
-    BIDERECTIONAL_LSTM,
+    EMBEDDING_DIM,
+    ATTENTION_DIM,
+    DECODER_DIM,
     DECODER_DROP_PROB,
     DECODER_PAD_INDEX,
     # GENERAL
@@ -15,9 +10,10 @@ from settings import (
     LEARNING_RATE,
     TEATHER_FORCING_PROB,
     OPTIMIZER,
+    LOSS_PAD_INDEX,
     NUMBER_OF_ITERATIONS,
+    DEVICE,
 )
-
 import os
 
 
@@ -35,18 +31,15 @@ def saveSettings():
     file = os.path.join(folder, filename)
     
     with open(file, 'w') as f:
-        f.write(f'ENCODER_OUTPUT_SIZE : {ENCODER_OUTPUT_SIZE}\n')
-        f.write(f'ENCODER_HIDDEN_1_SIZE : {ENCODER_HIDDEN_1_SIZE}\n')
-        f.write(f'ENCODER_HIDDEN_2_SIZE : {ENCODER_HIDDEN_2_SIZE}\n')
-        f.write(f'ENCODER_DROP_PROB : {ENCODER_DROP_PROB}\n')
-        f.write(f'DECODER_LSTM_HIDDEN_SIZE : {DECODER_LSTM_HIDDEN_SIZE}\n')
-        f.write(f'NUMBER_OF_LSTM_LAYERS : {NUMBER_OF_LSTM_LAYERS}\n')
-        f.write(f'BIDERECTIONAL_LSTM : {BIDERECTIONAL_LSTM}\n')
+        f.write(f'EMBEDDING_DIM : {EMBEDDING_DIM}\n')
+        f.write(f'ATTENTION_DIM : {ATTENTION_DIM}\n')
+        f.write(f'DECODER_DIM : {DECODER_DIM}\n')
         f.write(f'DECODER_DROP_PROB : {DECODER_DROP_PROB}\n')
         f.write(f'DECODER_PAD_INDEX : {DECODER_PAD_INDEX}\n')
         f.write(f'BATCH_SIZE : {BATCH_SIZE}\n')
         f.write(f'LEARNING_RATE : {LEARNING_RATE}\n')
         f.write(f'OPTIMIZER : {str(OPTIMIZER).split(".")[-2]}\n')
+        f.write(f'LOSS_PAD_INDEX : {LOSS_PAD_INDEX}\n')
         f.write(f'NUMBER_OF_ITERATIONS : {NUMBER_OF_ITERATIONS}\n')
         f.write(f'TEATHER_FORCING_PROB : {TEATHER_FORCING_PROB}\n')
     
