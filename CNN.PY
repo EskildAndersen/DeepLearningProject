@@ -20,7 +20,8 @@ class CNNPreTrain(nn.Module):
 
         # Feed images through VGG16
         features = self.vgg16(images)
-        features = features.view(features.size(0), -1)
+        features = features.permute(0, 2,3,1)
+        features = features.view(features.size(0), -1, features.size(-1)).squeeze()
 
         return features
 
@@ -40,7 +41,8 @@ class CNNPreTrain(nn.Module):
 
 if __name__ == '__main__':
     txtFilePath = 'labels.txt'
-    dataset = Images(txtFilePath)
+    mean, std = (117.9994, 113.3671, 102.7541), (70.1257, 68.0825, 71.3111) 
+    dataset = Images(txtFilePath, mean, std, transform=False)
     dataLoader = DataLoader(dataset, batch_size=1, shuffle=False)
 
     # specify dim of image embedding
@@ -59,3 +61,4 @@ if __name__ == '__main__':
     dump(Features, open("features.p", "wb"))
 
     features = load(open("features.p", "rb"))
+

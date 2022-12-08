@@ -108,15 +108,22 @@ class Images(torch.utils.data.Dataset):
         img_path = os.path.join(self.img_dir, name)
 
         if self.transform:
-            nn.Sequential(
+            preprocess = T.Compose([
                                             
                 T.transforms.Resize(224),        # Resize image
                 T.transforms.Normalize(
-                    self.mean,                   # Normalize data
-                    self.std))
+                    (0.485, 0.456, 0.406),(0.229, 0.224, 0.225))])
+                    #mean = self.mean,                   # Normalize data
+                    #std = self.std)])
+
             image = read_image(img_path).float()
+            image = preprocess(image)
         else:
-            image = read_image(img_path)
+            preprocess = T.Compose([                   
+                T.transforms.Resize(224)])
+
+            image = read_image(img_path).float()
+            image = preprocess(image)
 
         label = self.img_labels.iloc[idx, 1]
 
