@@ -1,59 +1,49 @@
 import torch
 import torch.nn as nn
+from vocabulary import max_len
+import torchvision.models as models
 
 
-class FeatureEncoder(nn.Module):
+class CNNEncoder(nn.Module):
     def __init__(
-        self,
-        feature_len,
-        output_len,
-        device,
-        hidden_layer1_len=2**12,
-        hidden_layer2_len=2**11,
-        drop_prob=0.1,
+        self
     ):
-        super(FeatureEncoder, self).__init__()
-        self.device = device
+        super(CNNEncoder, self).__init__()
+        vgg16 = models.vgg16(pretrained=True)
+        for param in vgg16.parameters():
+            param.requires_grad_(False)
 
-        self.feature_len = feature_len
-        self.output_len = output_len
-        self.hidden_layer1_len = hidden_layer1_len
-        self.hidden_layer2_len = hidden_layer2_len
-
-        self.Linear1 = nn.Linear(
-            in_features=feature_len,
-            out_features=self.hidden_layer1_len
-        )
-        self.Linear2 = nn.Linear(
-            in_features=self.hidden_layer1_len,
-            out_features=self.hidden_layer2_len
-        )
-        self.Linear3 = nn.Linear(
-            in_features=self.hidden_layer2_len,
-            out_features=self.output_len
-        )
-        self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(drop_prob)
+        # Remove linear and pool layers (since we're not doing classification)
+        modules = list(vgg16.children())[:-1]
+        self.vgg16 = nn.Sequential(*modules)
 
     def forward(
-        self,
-        features,   # (batch_size, number_layers, feature_len)
+        self, 
+        images,
     ):
 
-        denseFeature = self.Linear1(features.squeeze(1))
-        denseFeature = self.dropout(denseFeature)
-        denseFeature = self.relu(denseFeature)
+        # Feed images through VGG16
+        features = self.vgg16(images)
+        features = features.permute(0, 2,3,1)
+        features = features.view(features.size(0), -1, features.size(-1)).squeeze()
 
-        denseFeature = self.Linear2(denseFeature)
-        denseFeature = self.dropout(denseFeature)
-        denseFeature = self.relu(denseFeature)
+        return features
 
-        denseFeature = self.Linear3(denseFeature)
-        denseFeature = self.dropout(denseFeature)
-        output = self.relu(denseFeature)  # (batch_size ,output_size)
+    def fine_tune(
+        self, 
+        fine_tune=True
+    ):
+        """
+        Allow or prevent the computation of gradients for convolutional blocks 2 through 4 of the encoder.
+        :param fine_tune: Allow?
+        """
 
-        return output.unsqueeze(1) # (batch_size, number_layers, output_size)
-
+        for p in self.vgg16.parameters():
+            p.requires_grad = False
+        # If fine-tuning, only fine-tune convolutional blocks 2 through 4
+        for c in list(self.vgg16.children())[5:]:
+            for p in c.parameters():
+                p.requires_grad = fine_tune
 
 
 class Attention(nn.Module):
@@ -123,24 +113,41 @@ class DecoderWithAttention(nn.Module):
         self,
         sentences,  # (batch_size)
         encoder_features, # (batch_size, number_of_layers=49, encoder_output_size=512)
-        prev_hidden,    # (batch_size, hidden_size)
-        prev_cell,  # (batch_size, hidden_size)
-    ):
+    ):  
+        global max_len
+
         # Embedding
         embedded = self.embedding(sentences)
         embedded = self.dropout(embedded)   # (batch_size, embedding_dim)
 
-        # Attention
-        alphas, attn_weights = self.attention(encoder_features, prev_hidden)
+        batch_size = sentences.shape[0]
+
+        hidden, cell = self.getInitialHidden(batch_size)
+
+
+        outputs = []
+        alphas = []
+
+        for s in range(max_len-1):
+
+            # Attention
+            alpha, attn_weight = self.attention(encoder_features, hidden)
         
-        lstm_input = torch.cat((embedded, attn_weights) , -1)
-        hidden, cell = self.lstm_cell(lstm_input, (prev_hidden, prev_cell))
+            lstm_input = torch.cat((embedded[:, s], attn_weight) , -1)
+
+            hidden, cell = self.lstm_cell(lstm_input, (hidden, cell))
+            
+            hidden = self.dropout(hidden)
+            
+            output = self.LinearMap(hidden)
+
+            outputs.append(output)
+            alphas.append(alpha)
         
-        hidden = self.dropout(hidden)
-        
-        output = self.LinearMap(hidden)
-        
-        return output, (hidden, cell), (alphas, attn_weights)
+        outputs = torch.stack(outputs, dim = 1)
+        alphas = torch.stack(alphas, dim = 1)
+
+        return outputs, alphas
 
 
     def getInitialHidden(self, batch_size):
@@ -148,5 +155,3 @@ class DecoderWithAttention(nn.Module):
         cell = torch.zeros((batch_size, self.decoder_dim)).to(self.device)
 
         return hidden, cell
-
-

@@ -56,23 +56,14 @@ def getContextVector(
         hidden, cell = decoder.getInitialHidden(batch_size)
         contextList = []
         # reccurent decoder part
-        for _ in range(1, max_len):
-            input_decoder = prediction
-            output, (hidden, cell), (alpha,attnWeights) = decoder(
-                input_decoder,
-                input_features,
-                hidden,
-                cell
-            )
+        output, alphas = decoder(
+            input_sentences,
+            input_features,
+        )
 
-            # calculate prediction to use as the next input
-            prediction = output.argmax(-1)
-            predictions.append(prediction)
-            contextList.append(alpha)
-        # prep final prediction and labels for Bleu calculations
-        predictions = torch.stack(predictions, 1)
-        contextList = torch.stack(contextList)
-        return contextList, predictions
+        # calculate prediction to use as the next input
+        prediction = output.argmax(-1)
+        return alphas, prediction
 
 def plotAttention(img_path,contextVector,prediction):
     listOfWords = prediction.split()
@@ -120,7 +111,7 @@ if __name__ == '__main__':
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    decoder = torch.load('settings_16_decoder.pt',map_location=device)
+    decoder = torch.load('settings_21_decoder.pt',map_location=device)
     decoder.device = device # since only one gpu quick fix
     decoder.eval()
 
@@ -140,6 +131,6 @@ if __name__ == '__main__':
 
     prediction = deTokenizeCaptions(prediction[0],True)
 
-    plotAttention(img_path,contextVector,prediction)
+    plotAttention(img_path,contextVector[0],prediction)
     
 
