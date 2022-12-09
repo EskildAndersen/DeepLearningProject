@@ -20,9 +20,11 @@ import numpy as np
 import os
 import pandas as pd
 import torchvision.transforms as T
+import matplotlib.pyplot as plt
 from torch.utils.data import Dataset, DataLoader
 from pickle import load, dump
-from CaptionCoder import deTokenizeCaptions, tokenizeCaptions
+from torchvision.io import read_image
+from CaptionCoder import tokenizeCaptions
 
 
 class ImageDataset(Dataset):
