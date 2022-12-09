@@ -9,13 +9,13 @@ from torchvision.io import read_image
 import torch
 import torchvision.transforms as T
 import matplotlib.pyplot as plt
-import numpy as np
 from torch.utils.data import DataLoader
 from EncoderDecoder import CNNEncoder
 from DataPreparator import ImageDataset
-from pickle import dump, load
+from pickle import dump
 from plots import getContextVector, plotAttention
 from CaptionCoder import deTokenizeCaptions
+from vocabulary import SOS_token
 
 class OwnImages(torch.utils.data.Dataset):
     def __init__(self, transform):
@@ -43,7 +43,7 @@ class OwnImages(torch.utils.data.Dataset):
         else:
             image = read_image(img_path)
     
-        return image, img_path
+        return image, name
 
 
 def extractFeaturesOwnImages(device):
@@ -79,7 +79,7 @@ def extractFeaturesOwnImages(device):
 
 if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    extractFeaturesOwnImages(device)
+    #extractFeaturesOwnImages(device)
 
     feature_name = 'own_features.p'
 
@@ -87,7 +87,7 @@ if __name__ == '__main__':
     decoder.device = device # since only one gpu quick fix
     decoder.eval()
 
-    train_dataset = ImageDataset(f'test_labels.txt', feature_vector=feature_name)
+    train_dataset = ImageDataset(f'own_images_labels.txt', feature_vector=feature_name)
 
     dataloader = torch.utils.data.DataLoader(
         train_dataset,
