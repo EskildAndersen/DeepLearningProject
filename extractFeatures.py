@@ -18,7 +18,7 @@ def extractFeatures(annotationsFile, device):
     dataset = Images(annotationsFile, mean, std, transform=True)
     dataLoader = DataLoader(dataset, batch_size=1, shuffle=False)
 
-    CNN = CNNEncoder()
+    CNN = CNNEncoder(device)
     CNN.to(device)
 
     # Extract features for all images

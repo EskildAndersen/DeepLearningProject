@@ -127,7 +127,7 @@ class Images(torch.utils.data.Dataset):
             preprocess = T.Compose([                   
                 T.transforms.Resize(224)])
 
-            image = read_image(img_path).float()
+            image = read_image(img_path)
             image = preprocess(image)
 
         label = self.img_labels.iloc[idx, 1]
@@ -164,7 +164,7 @@ if __name__ == '__main__':
     mean, std = (0.485, 0.456, 0.406),(0.229, 0.224, 0.225)
 
     # get some images
-    dataset = Images(annotationsFile, mean, std)
+    dataset = Images(annotationsFile, mean, std, transform=False)
     data_loader = DataLoader(dataset, batch_size=1, shuffle=True)
     dataiter = iter(data_loader)
     images, names, labels = dataiter.next()

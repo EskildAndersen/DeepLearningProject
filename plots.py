@@ -51,47 +51,30 @@ def getContextVector(
     ): 
         input_features = input_features.to(DEVICE)
         input_sentences = input_sentences.to(DEVICE)
-        
-        batch_size = input_features.shape[0]
 
-        # initialize for decoder
-        prediction = torch.full((batch_size,), SOS_token).to(DEVICE)
-        predictions = []
-        hidden, cell = decoder.getInitialHidden(batch_size)
-        contextList = []
         # reccurent decoder part
-        for _ in range(1, max_len):
-            input_decoder = prediction
-            output, (hidden, cell), (alpha,attnWeights) = decoder(
-                input_decoder,
-                input_features,
-                hidden,
-                cell
-            )
+        outputs, alphas = decoder(input_sentences, input_features)
 
-            # calculate prediction to use as the next input
-            prediction = output.argmax(-1)
-            predictions.append(prediction)
-            contextList.append(alpha)
-        # prep final prediction and labels for Bleu calculations
-        predictions = torch.stack(predictions, 1)
-        contextList = torch.stack(contextList)
-        return contextList, predictions
+        # calculate prediction to use as the next input
+        predictions = outputs.argmax(-1)
+
+        return alphas, predictions
+
 
 def plotAttention(img_path,contextVector,prediction):
     listOfWords = prediction.split()
-    image = read_image(os.path.join('data','images',img_path[0]))
+    image = read_image(os.path.join('data','own_images',img_path[0]))
     dim = contextVector.shape[-1]
     dim = int(np.sqrt(dim))
     axisLen = int(np.ceil(np.sqrt(len(listOfWords))))
-    fig,ax = plt.subplots(nrows=axisLen,ncols=axisLen)
+    fig,ax = plt.subplots(nrows=3,ncols=3)
 
     idx = 0
     for i in range(axisLen):
         for j in range(axisLen):
             try:
                 context = contextVector[idx].cpu().detach()
-                contextToPlot = torch.reshape(context,(dim,dim))
+                contextToPlot = torch.reshape(context,(38, dim,dim))
                 img = ax[i][j].imshow(np.transpose(image.numpy(), (1, 2, 0)))
                 ax[i][j].imshow(contextToPlot,cmap = 'gray',
                                 alpha=0.6,clim = [0.0,context.max().item()],
@@ -102,6 +85,8 @@ def plotAttention(img_path,contextVector,prediction):
                 break
     
     fig.show()
+
+    pass
 
 if __name__ == '__main__':
 
