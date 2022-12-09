@@ -262,7 +262,7 @@ def getContextVector(
 
 def plotAttention(img_path,contextVector,prediction):
     listOfWords = prediction.split()
-    image = read_image(os.path.join('data','own_images',img_path[0]))
+    image = read_image(os.path.join('data','images',img_path[0]))
     dim = contextVector.shape[-1]
     dim = int(np.sqrt(dim))
     axisLen = int(np.ceil(np.sqrt(len(listOfWords))))
@@ -273,7 +273,7 @@ def plotAttention(img_path,contextVector,prediction):
         for j in range(axisLen):
             try:
                 context = contextVector[idx].cpu().detach()
-                contextToPlot = torch.reshape(context,(38, dim,dim))
+                contextToPlot = torch.reshape(context,(dim,dim))
                 img = ax[i][j].imshow(np.transpose(image.numpy(), (1, 2, 0)))
                 ax[i][j].imshow(contextToPlot,cmap = 'gray',
                                 alpha=0.6,clim = [0.0,context.max().item()],
