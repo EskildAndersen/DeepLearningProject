@@ -111,7 +111,7 @@ if __name__ == '__main__':
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    decoder = torch.load('settings_21_decoder.pt',map_location=device)
+    decoder = torch.load(os.path.join('results','models','settings_32_decoder.pt'),map_location=device)
     decoder.device = device # since only one gpu quick fix
     decoder.eval()
 

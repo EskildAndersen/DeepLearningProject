@@ -8,3 +8,4 @@ pitch/ProjectPitch.mp4
 
 *.pt
 dl_venv/*
+results/models/*
