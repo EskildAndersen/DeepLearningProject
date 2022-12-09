@@ -251,13 +251,14 @@ def getContextVector(
         input_sentences = input_sentences.to(DEVICE)
 
         # reccurent decoder part
-        outputs, alphas = decoder(input_sentences, input_features)
+        output, alphas = decoder(
+            input_sentences,
+            input_features,
+        )
 
         # calculate prediction to use as the next input
-        predictions = outputs.argmax(-1)
-
-        return alphas, predictions
-
+        prediction = output.argmax(-1)
+        return alphas, prediction
 
 def plotAttention(img_path,contextVector,prediction):
     listOfWords = prediction.split()
@@ -290,7 +291,7 @@ if __name__ == '__main__':
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    decoder = torch.load('results/models/settings_21_decoder.pt',map_location=device)
+    decoder = torch.load(os.path.join('results','models','settings_32_decoder.pt'),map_location=device)
     decoder.device = device # since only one gpu quick fix
     decoder.eval()
 
@@ -309,6 +310,6 @@ if __name__ == '__main__':
 
     prediction = deTokenizeCaptions(prediction[0],True)
 
-    plotAttention(img_path,contextVector,prediction)
+    plotAttention(img_path,contextVector[0],prediction)
     
     plot_main()

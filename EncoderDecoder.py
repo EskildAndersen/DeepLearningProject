@@ -156,5 +156,3 @@ class DecoderWithAttention(nn.Module):
         cell = torch.zeros((batch_size, self.decoder_dim)).to(self.device)
 
         return hidden, cell
-
-
